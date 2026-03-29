@@ -1,0 +1,16 @@
+name: Build APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build APK
+        uses: pwabuilder/pwabuilder-android-action@v1
+        with:
+          package-id: com.connecthub.app
+          manifest-url: https://connecthub40.pages.dev/manifest.json
+      - uses: actions/upload-artifact@v3
+        with:
+          name: connecthub-apk
+          path: '*.apk'
