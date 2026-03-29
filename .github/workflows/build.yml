@@ -13,131 +13,89 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Create twa directory
-        run: mkdir -p ./twa
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Init Bubblewrap project
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create twa directory and manifest
         run: |
-          node << 'NODEJS'
-          const { spawn } = require('child_process');
-          const proc = spawn('bubblewrap', [
-            'init',
-            '--manifest', 'https://connecthub40.pages.dev/manifest.json',
-            '--directory', './twa'
-          ], { stdio: ['pipe', 'pipe', 'pipe'] });
+          mkdir -p ./twa
 
-          // Use \r instead of \n — inquirer.js uses TTY raw mode
-          const answers = [
-            { trigger: /install the JDK/i,              answer: 'y' },
-            { trigger: /install the Android SDK/i,      answer: 'y' },
-            { trigger: /agree to the Android SDK/i,     answer: 'y' },
-            { trigger: /Domain:/,                       answer: 'connecthub40.pages.dev' },
-            { trigger: /URL path:/,                     answer: '/' },
-            { trigger: /Application name:/,             answer: 'ConnectHub' },
-            { trigger: /Short name:/,                   answer: 'ConnectHub' },
-            { trigger: /Application ID:/,               answer: 'com.connecthub.app' },
-            { trigger: /Starting version code/,         answer: '1' },
-            { trigger: /Display mode:/,                 answer: '' },
-            { trigger: /Orientation:/,                  answer: '' },
-            { trigger: /Status bar color:/,             answer: '' },
-            { trigger: /Splash screen color:/,          answer: '' },
-            { trigger: /Icon URL:/,                     answer: '' },
-            { trigger: /Maskable icon URL:/,            answer: '' },
-            { trigger: /Monochrome icon URL:/,          answer: 'https://connecthub40.pages.dev/icon-512.png' },
-            { trigger: /Enable Play Billing/,           answer: '' },
-            { trigger: /Enable Location Delegation/,    answer: '' },
-            { trigger: /Key store location:/,           answer: './android.keystore' },
-            { trigger: /Key name:/,                     answer: 'android' },
-            { trigger: /create a signing key/i,         answer: 'y' },
-            { trigger: /First and Last names:/,         answer: 'ConnectHub Dev' },
-            { trigger: /Organizational Unit:/,          answer: 'Dev' },
-            { trigger: /Organization:/,                 answer: 'ConnectHub' },
-            { trigger: /Country Code:/,                 answer: 'US' },
-            { trigger: /Password for the Key Store/,    answer: 'connecthub123' },
-            { trigger: /Password for the Key:/,         answer: 'connecthub123' },
-          ];
-
-          let buffer = '';
-          let answerIndex = 0;
-          let busy = false;
-
-          function tryAnswer(data) {
-            buffer += data.toString();
-            process.stdout.write(data);
-
-            if (busy || answerIndex >= answers.length) return;
-
-            const { trigger, answer } = answers[answerIndex];
-            if (trigger.test(buffer)) {
-              answerIndex++;
-              buffer = '';
-              busy = true;
-              setTimeout(() => {
-                // Send the answer then \r (carriage return) to confirm
-                proc.stdin.write(answer + '\r');
-                busy = false;
-              }, 800);
-            }
+          # Write twa-manifest.json directly — skips ALL interactive prompts
+          cat > ./twa/twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.connecthub.app",
+            "host": "connecthub40.pages.dev",
+            "name": "ConnectHub",
+            "launcherName": "ConnectHub",
+            "display": "standalone",
+            "orientation": "default",
+            "themeColor": "#000000",
+            "navigationColor": "#000000",
+            "navigationColorDark": "#000000",
+            "navigationDividerColor": "#000000",
+            "navigationDividerColorDark": "#000000",
+            "backgroundColor": "#ffffff",
+            "enableNotifications": false,
+            "startUrl": "/",
+            "iconUrl": "https://connecthub40.pages.dev/icon-512.png",
+            "maskableIconUrl": "https://connecthub40.pages.dev/icon-512.png",
+            "monochromeIconUrl": "https://connecthub40.pages.dev/icon-512.png",
+            "splashScreenFadeOutDuration": 300,
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "android"
+            },
+            "appVersionCode": 1,
+            "appVersionName": "1.0.0",
+            "shortcuts": [],
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://connecthub40.pages.dev/manifest.json",
+            "fallbackType": "customtabs",
+            "features": {
+              "locationDelegation": { "enabled": false },
+              "playBilling": { "enabled": false }
+            },
+            "alphaDependencies": { "enabled": false },
+            "enableSiteSettingsShortcut": true,
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://connecthub40.pages.dev/",
+            "minSdkVersion": 19,
+            "targetSdkVersion": 32
           }
+          EOF
 
-          proc.stdout.on('data', tryAnswer);
-          proc.stderr.on('data', tryAnswer);
-
-          proc.on('close', (code) => {
-            console.log('Init process exited with code', code);
-            process.exit(code);
-          });
-          NODEJS
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: '1'
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair \
+            -keystore ./twa/android.keystore \
+            -alias android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass connecthub123 \
+            -keypass connecthub123 \
+            -dname "CN=ConnectHub Dev, OU=Dev, O=ConnectHub, L=Unknown, ST=Unknown, C=US" \
+            -noprompt
 
       - name: Build APK
+        working-directory: ./twa
         run: |
-          node << 'NODEJS'
-          const { spawn } = require('child_process');
-          const proc = spawn('sh', ['-c', 'cd twa && bubblewrap build'], {
-            stdio: ['pipe', 'pipe', 'pipe']
-          });
-
-          const answers = [
-            { trigger: /regenerate your project/i,    answer: 'y' },
-            { trigger: /Password for the Key Store/,  answer: 'connecthub123' },
-            { trigger: /Password for the Key:/,       answer: 'connecthub123' },
-            { trigger: /license/i,                    answer: 'y' },
-          ];
-
-          let buffer = '';
-          let answerIndex = 0;
-          let busy = false;
-
-          function tryAnswer(data) {
-            buffer += data.toString();
-            process.stdout.write(data);
-
-            if (busy || answerIndex >= answers.length) return;
-
-            const { trigger, answer } = answers[answerIndex];
-            if (trigger.test(buffer)) {
-              answerIndex++;
-              buffer = '';
-              busy = true;
-              setTimeout(() => {
-                proc.stdin.write(answer + '\r');
-                busy = false;
-              }, 800);
-            }
-          }
-
-          proc.stdout.on('data', tryAnswer);
-          proc.stderr.on('data', tryAnswer);
-
-          proc.on('close', (code) => {
-            console.log('Build process exited with code', code);
-            process.exit(code);
-          });
-          NODEJS
+          # bubblewrap build reads twa-manifest.json and uses the keystore
+          # JAVA_HOME is already set by setup-java; pass passwords via env
+          bubblewrap build \
+            --skipPwaValidation
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: '1'
+          # bubblewrap reads these env vars for keystore passwords
+          BUBBLEWRAP_KEY_STORE_PASSWORD: connecthub123
+          BUBBLEWRAP_KEY_PASSWORD: connecthub123
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
