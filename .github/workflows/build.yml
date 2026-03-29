@@ -23,10 +23,31 @@ jobs:
           set timeout 600
           spawn bubblewrap init --manifest https://connecthub40.pages.dev/manifest.json --directory ./twa
           expect {
-            "install the JDK" { send "y\r"; exp_continue }
-            "install the Android SDK" { send "y\r"; exp_continue }
-            "agree to the Android SDK terms" { send "y\r"; exp_continue }
-            "Application ID:" { send "com.connecthub.app\r"; exp_continue }
+            "install the JDK"              { send "y\r"; exp_continue }
+            "install the Android SDK"      { send "y\r"; exp_continue }
+            "agree to the Android SDK"     { send "y\r"; exp_continue }
+            "Domain:"                      { send "connecthub40.pages.dev\r"; exp_continue }
+            "URL path:"                    { send "/\r"; exp_continue }
+            "Application ID:"              { send "com.connecthub.app\r"; exp_continue }
+            "App name:"                    { send "ConnectHub\r"; exp_continue }
+            "Display mode:"                { send "\r"; exp_continue }
+            "Orientation:"                 { send "\r"; exp_continue }
+            "theme color"                  { send "\r"; exp_continue }
+            "background color"             { send "\r"; exp_continue }
+            "Splash screen color:"         { send "\r"; exp_continue }
+            "Icon URL:"                    { send "\r"; exp_continue }
+            "Maskable icon URL:"           { send "\r"; exp_continue }
+            "Monochrome icon URL:"         { send "\r"; exp_continue }
+            "shortcuts"                    { send "\r"; exp_continue }
+            "create one now"               { send "y\r"; exp_continue }
+            "First and Last names"         { send "ConnectHub Dev\r"; exp_continue }
+            "Organizational Unit"          { send "Dev\r"; exp_continue }
+            "Organization"                 { send "ConnectHub\r"; exp_continue }
+            "Country"                      { send "US\r"; exp_continue }
+            "Password for the Key Store:"  { send "connecthub123\r"; exp_continue }
+            "Password for the Key:"        { send "connecthub123\r"; exp_continue }
+            "Key name:"                    { send "android\r"; exp_continue }
+            "Key store location:"          { send "./android.keystore\r"; exp_continue }
             eof
           }
           EOF
@@ -38,8 +59,19 @@ jobs:
 
       - name: Build APK
         run: |
-          cd twa
-          yes | bubblewrap build
+          cat > /tmp/bubblewrap_build.exp << 'EOF'
+          #!/usr/bin/expect -f
+          set timeout 600
+          spawn sh -c "cd twa && bubblewrap build"
+          expect {
+            "Password for the Key Store:" { send "connecthub123\r"; exp_continue }
+            "Password for the Key:"       { send "connecthub123\r"; exp_continue }
+            "license"                     { send "y\r"; exp_continue }
+            eof
+          }
+          EOF
+          chmod +x /tmp/bubblewrap_build.exp
+          /tmp/bubblewrap_build.exp
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
