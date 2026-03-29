@@ -23,10 +23,10 @@ jobs:
             spawn bubblewrap init --manifest https://connecthub40.pages.dev/manifest.json --directory ./twa
             expect "Y/n" { send "y\r" }
             expect "Y/n" { send "y\r" }
+            expect "Y/n" { send "y\r" }
             expect "Application ID:" { send "com.connecthub.app\r" }
             expect eof
           '
-          ls -la
           ls -la twa || echo "twa directory not created!"
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
