@@ -10,18 +10,12 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
       - name: Init Bubblewrap project
         run: |
-          echo -e "n\n$JAVA_HOME\n" | bubblewrap init \
+          printf "y\n" | bubblewrap init \
             --manifest https://connecthub40.pages.dev/manifest.json \
             --directory ./twa
         env:
