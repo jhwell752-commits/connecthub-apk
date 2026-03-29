@@ -13,12 +13,18 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Install expect
+        run: sudo apt-get install -y expect
+
       - name: Init Bubblewrap project
         run: |
-          yes | bubblewrap init \
-            --manifest https://connecthub40.pages.dev/manifest.json \
-            --directory ./twa \
-            --packageId com.connecthub.app
+          expect -c '
+            spawn bubblewrap init --manifest https://connecthub40.pages.dev/manifest.json --directory ./twa
+            expect "Y/n" { send "y\r" }
+            expect "Y/n" { send "y\r" }
+            expect "Application ID:" { send "com.connecthub.app\r" }
+            expect eof
+          '
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
