@@ -5,36 +5,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
- 
+
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
- 
+
       - name: Install Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
- 
+
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
- 
+
       - name: Init Bubblewrap project
         run: |
-          bubblewrap init \
+          echo -e "n\n" | bubblewrap init \
             --manifest https://connecthub40.pages.dev/manifest.json \
-            --directory ./twa \
-            --skip-prompt \
-            --package-id com.connecthub.app
- 
+            --directory ./twa
+        env:
+          BUBBLEWRAP_DISABLE_TELEMETRY: true
+
       - name: Build APK
         run: |
           cd twa
-          bubblewrap build --skip-prompt
- 
+          echo -e "\n\n\n\n\n\n" | bubblewrap build
+        env:
+          BUBBLEWRAP_DISABLE_TELEMETRY: true
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: connecthub-apk
           path: twa/*.apk
- 
