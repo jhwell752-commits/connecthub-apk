@@ -41,7 +41,7 @@ jobs:
             { trigger: 'Display mode:',                answer: '' },
             { trigger: 'Orientation:',                 answer: '' },
             { trigger: 'Status bar color:',            answer: '' },
-            { trigger: 'Theme Color:',                 answer: '' },
+            { trigger: 'splash screen',                answer: '' },
             { trigger: 'Background color:',            answer: '' },
             { trigger: 'Icon URL:',                    answer: '' },
             { trigger: 'Maskable icon URL:',           answer: '' },
@@ -71,7 +71,7 @@ jobs:
               buffer = '';
               setTimeout(() => {
                 proc.stdin.write(answer + '\n');
-              }, 200);
+              }, 500);
             }
           }
 
@@ -114,7 +114,7 @@ jobs:
               buffer = '';
               setTimeout(() => {
                 proc.stdin.write(answer + '\n');
-              }, 200);
+              }, 500);
             }
           }
 
