@@ -13,6 +13,9 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Install expect
+        run: sudo apt-get install -y expect
+
       - name: Create twa directory and manifest
         run: |
           mkdir -p ./twa
@@ -49,16 +52,6 @@ jobs:
             }
           }
           EOF
-
-      - name: Install expect
-        run: sudo apt-get install -y expect
-
-      - name: Generate project from manifest
-        run: |
-          cd twa
-          bubblewrap update
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
 
       - name: Build APK
         run: |
