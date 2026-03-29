@@ -26,51 +26,57 @@ jobs:
             '--directory', './twa'
           ], { stdio: ['pipe', 'pipe', 'pipe'] });
 
-          let buffer = '';
-
+          // Use \r instead of \n — inquirer.js uses TTY raw mode
           const answers = [
-            { trigger: 'install the JDK',              answer: 'y' },
-            { trigger: 'install the Android SDK',      answer: 'y' },
-            { trigger: 'agree to the Android SDK',     answer: 'y' },
-            { trigger: 'Domain:',                      answer: 'connecthub40.pages.dev' },
-            { trigger: 'URL path:',                    answer: '/' },
-            { trigger: 'Application name:',            answer: 'ConnectHub' },
-            { trigger: 'Short name:',                  answer: 'ConnectHub' },
-            { trigger: 'Application ID:',              answer: 'com.connecthub.app' },
-            { trigger: 'Starting version code',        answer: '1' },
-            { trigger: 'Display mode:',                answer: '' },
-            { trigger: 'Orientation:',                 answer: '' },
-            { trigger: 'Status bar color:',            answer: '' },
-            { trigger: 'Splash screen color:',         answer: '' },
-            { trigger: 'Icon URL: (',                  answer: '' },
-            { trigger: 'Maskable icon URL: (',         answer: '' },
-            { trigger: 'Monochrome icon URL: ()',      answer: 'https://connecthub40.pages.dev/icon-512.png' },
-            { trigger: 'Enable Play Billing',          answer: '' },
-            { trigger: 'Enable Location Delegation',   answer: '' },
-            { trigger: 'Key store location:',          answer: './android.keystore' },
-            { trigger: 'Key name:',                    answer: 'android' },
-            { trigger: 'create a signing key',         answer: 'y' },
-            { trigger: 'First and Last names:',        answer: 'ConnectHub Dev' },
-            { trigger: 'Organizational Unit:',         answer: 'Dev' },
-            { trigger: 'Organization:',                answer: 'ConnectHub' },
-            { trigger: 'Country Code:',                answer: 'US' },
-            { trigger: 'Password for the Key Store',   answer: 'connecthub123' },
-            { trigger: 'Password for the Key:',        answer: 'connecthub123' },
+            { trigger: /install the JDK/i,              answer: 'y' },
+            { trigger: /install the Android SDK/i,      answer: 'y' },
+            { trigger: /agree to the Android SDK/i,     answer: 'y' },
+            { trigger: /Domain:/,                       answer: 'connecthub40.pages.dev' },
+            { trigger: /URL path:/,                     answer: '/' },
+            { trigger: /Application name:/,             answer: 'ConnectHub' },
+            { trigger: /Short name:/,                   answer: 'ConnectHub' },
+            { trigger: /Application ID:/,               answer: 'com.connecthub.app' },
+            { trigger: /Starting version code/,         answer: '1' },
+            { trigger: /Display mode:/,                 answer: '' },
+            { trigger: /Orientation:/,                  answer: '' },
+            { trigger: /Status bar color:/,             answer: '' },
+            { trigger: /Splash screen color:/,          answer: '' },
+            { trigger: /Icon URL:/,                     answer: '' },
+            { trigger: /Maskable icon URL:/,            answer: '' },
+            { trigger: /Monochrome icon URL:/,          answer: 'https://connecthub40.pages.dev/icon-512.png' },
+            { trigger: /Enable Play Billing/,           answer: '' },
+            { trigger: /Enable Location Delegation/,    answer: '' },
+            { trigger: /Key store location:/,           answer: './android.keystore' },
+            { trigger: /Key name:/,                     answer: 'android' },
+            { trigger: /create a signing key/i,         answer: 'y' },
+            { trigger: /First and Last names:/,         answer: 'ConnectHub Dev' },
+            { trigger: /Organizational Unit:/,          answer: 'Dev' },
+            { trigger: /Organization:/,                 answer: 'ConnectHub' },
+            { trigger: /Country Code:/,                 answer: 'US' },
+            { trigger: /Password for the Key Store/,    answer: 'connecthub123' },
+            { trigger: /Password for the Key:/,         answer: 'connecthub123' },
           ];
 
+          let buffer = '';
           let answerIndex = 0;
+          let busy = false;
 
           function tryAnswer(data) {
             buffer += data.toString();
             process.stdout.write(data);
-            if (answerIndex >= answers.length) return;
+
+            if (busy || answerIndex >= answers.length) return;
+
             const { trigger, answer } = answers[answerIndex];
-            if (buffer.includes(trigger)) {
+            if (trigger.test(buffer)) {
               answerIndex++;
               buffer = '';
+              busy = true;
               setTimeout(() => {
-                proc.stdin.write(answer + '\n');
-              }, 1000);
+                // Send the answer then \r (carriage return) to confirm
+                proc.stdin.write(answer + '\r');
+                busy = false;
+              }, 800);
             }
           }
 
@@ -78,12 +84,12 @@ jobs:
           proc.stderr.on('data', tryAnswer);
 
           proc.on('close', (code) => {
-            console.log('Process exited with code', code);
+            console.log('Init process exited with code', code);
             process.exit(code);
           });
           NODEJS
         env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
+          BUBBLEWRAP_DISABLE_TELEMETRY: '1'
 
       - name: Build APK
         run: |
@@ -93,28 +99,32 @@ jobs:
             stdio: ['pipe', 'pipe', 'pipe']
           });
 
-          let buffer = '';
-
           const answers = [
-            { trigger: 'regenerate your project',    answer: 'y' },
-            { trigger: 'Password for the Key Store', answer: 'connecthub123' },
-            { trigger: 'Password for the Key:',      answer: 'connecthub123' },
-            { trigger: 'license',                    answer: 'y' },
+            { trigger: /regenerate your project/i,    answer: 'y' },
+            { trigger: /Password for the Key Store/,  answer: 'connecthub123' },
+            { trigger: /Password for the Key:/,       answer: 'connecthub123' },
+            { trigger: /license/i,                    answer: 'y' },
           ];
 
+          let buffer = '';
           let answerIndex = 0;
+          let busy = false;
 
           function tryAnswer(data) {
             buffer += data.toString();
             process.stdout.write(data);
-            if (answerIndex >= answers.length) return;
+
+            if (busy || answerIndex >= answers.length) return;
+
             const { trigger, answer } = answers[answerIndex];
-            if (buffer.includes(trigger)) {
+            if (trigger.test(buffer)) {
               answerIndex++;
               buffer = '';
+              busy = true;
               setTimeout(() => {
-                proc.stdin.write(answer + '\n');
-              }, 1000);
+                proc.stdin.write(answer + '\r');
+                busy = false;
+              }, 800);
             }
           }
 
@@ -122,12 +132,12 @@ jobs:
           proc.stderr.on('data', tryAnswer);
 
           proc.on('close', (code) => {
-            console.log('Process exited with code', code);
+            console.log('Build process exited with code', code);
             process.exit(code);
           });
           NODEJS
         env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
+          BUBBLEWRAP_DISABLE_TELEMETRY: '1'
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
