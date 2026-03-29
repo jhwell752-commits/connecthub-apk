@@ -26,29 +26,32 @@ jobs:
             "install the JDK"              { send "y\r"; exp_continue }
             "install the Android SDK"      { send "y\r"; exp_continue }
             "agree to the Android SDK"     { send "y\r"; exp_continue }
-            "Domain:"                      { send "connecthub40.pages.dev\r"; exp_continue }
-            "URL path:"                    { send "/\r"; exp_continue }
-            "Application ID:"              { send "com.connecthub.app\r"; exp_continue }
-            "App name:"                    { send "ConnectHub\r"; exp_continue }
-            "version code"                 { send "1\r"; exp_continue }
-            "Display mode:"                { send "\r"; exp_continue }
-            "Orientation:"                 { send "\r"; exp_continue }
-            "theme color"                  { send "\r"; exp_continue }
-            "background color"             { send "\r"; exp_continue }
-            "Splash screen color:"         { send "\r"; exp_continue }
-            "Icon URL:"                    { send "\r"; exp_continue }
-            "Maskable icon URL:"           { send "\r"; exp_continue }
-            "Monochrome icon URL:"         { send "\r"; exp_continue }
-            "shortcuts"                    { send "\r"; exp_continue }
-            "create one now"               { send "y\r"; exp_continue }
-            "First and Last names"         { send "ConnectHub Dev\r"; exp_continue }
-            "Organizational Unit"          { send "Dev\r"; exp_continue }
-            "Organization"                 { send "ConnectHub\r"; exp_continue }
-            "Country"                      { send "US\r"; exp_continue }
-            "Password for the Key Store:"  { send "connecthub123\r"; exp_continue }
-            "Password for the Key:"        { send "connecthub123\r"; exp_continue }
-            "Key name:"                    { send "android\r"; exp_continue }
-            "Key store location:"          { send "./android.keystore\r"; exp_continue }
+            "? Domain:"                    { send "connecthub40.pages.dev\r"; exp_continue }
+            "? URL path:"                  { send "/\r"; exp_continue }
+            "? Application name:"          { send "ConnectHub\r"; exp_continue }
+            "? Short name:"                { send "ConnectHub\r"; exp_continue }
+            "? Application ID:"            { send "com.connecthub.app\r"; exp_continue }
+            "? Starting version code"      { send "1\r"; exp_continue }
+            "? Display mode:"              { send "\r"; exp_continue }
+            "? Orientation:"               { send "\r"; exp_continue }
+            "? Status bar color:"          { send "\r"; exp_continue }
+            "? Theme Color:"               { send "\r"; exp_continue }
+            "? Background color:"          { send "\r"; exp_continue }
+            "? Icon URL:"                  { send "\r"; exp_continue }
+            "? Maskable icon URL:"         { send "\r"; exp_continue }
+            "? Monochrome icon URL:"       { send "\r"; exp_continue }
+            "? Include app shortcuts"      { send "y\r"; exp_continue }
+            "? Enable Play Billing"        { send "\r"; exp_continue }
+            "? Enable Location Delegation" { send "\r"; exp_continue }
+            "? Key store location:"        { send "./android.keystore\r"; exp_continue }
+            "? Key name:"                  { send "android\r"; exp_continue }
+            "create a signing key"         { send "y\r"; exp_continue }
+            "? First and Last names:"      { send "ConnectHub Dev\r"; exp_continue }
+            "? Organizational Unit:"       { send "Dev\r"; exp_continue }
+            "? Organization:"              { send "ConnectHub\r"; exp_continue }
+            "? Country Code:"              { send "US\r"; exp_continue }
+            "? Password for the Key Store" { send "connecthub123\r"; exp_continue }
+            "? Password for the Key:"      { send "connecthub123\r"; exp_continue }
             eof
           }
           EOF
