@@ -13,118 +13,75 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Create twa directory
-        run: mkdir -p ./twa
-
-      - name: Init Bubblewrap project
+      - name: Create twa directory and manifest
         run: |
-          node << 'NODEJS'
-          const { spawn } = require('child_process');
-          const proc = spawn('bubblewrap', [
-            'init',
-            '--manifest', 'https://connecthub40.pages.dev/manifest.json',
-            '--directory', './twa'
-          ], { stdio: ['pipe', 'pipe', 'pipe'] });
-
-          let buffer = '';
-
-          const answers = [
-            { trigger: 'install the JDK',              answer: 'y' },
-            { trigger: 'install the Android SDK',      answer: 'y' },
-            { trigger: 'agree to the Android SDK',     answer: 'y' },
-            { trigger: 'Domain:',                      answer: 'connecthub40.pages.dev' },
-            { trigger: 'URL path:',                    answer: '/' },
-            { trigger: 'Application name:',            answer: 'ConnectHub' },
-            { trigger: 'Short name:',                  answer: 'ConnectHub' },
-            { trigger: 'Application ID:',              answer: 'com.connecthub.app' },
-            { trigger: 'Starting version code',        answer: '1' },
-            { trigger: 'Display mode:',                answer: '' },
-            { trigger: 'Orientation:',                 answer: '' },
-            { trigger: 'Status bar color:',            answer: '' },
-            { trigger: 'Splash screen color:',         answer: '' },
-            { trigger: 'Icon URL: (',                  answer: '' },
-            { trigger: 'Maskable icon URL: (',         answer: '' },
-            { trigger: 'Monochrome icon URL: ()',      answer: ' ' },
-            { trigger: 'Enable Play Billing',          answer: '' },
-            { trigger: 'Enable Location Delegation',   answer: '' },
-            { trigger: 'Key store location:',          answer: './android.keystore' },
-            { trigger: 'Key name:',                    answer: 'android' },
-            { trigger: 'create a signing key',         answer: 'y' },
-            { trigger: 'First and Last names:',        answer: 'ConnectHub Dev' },
-            { trigger: 'Organizational Unit:',         answer: 'Dev' },
-            { trigger: 'Organization:',                answer: 'ConnectHub' },
-            { trigger: 'Country Code:',                answer: 'US' },
-            { trigger: 'Password for the Key Store',   answer: 'connecthub123' },
-            { trigger: 'Password for the Key:',        answer: 'connecthub123' },
-          ];
-
-          let answerIndex = 0;
-
-          function tryAnswer(data) {
-            buffer += data.toString();
-            process.stdout.write(data);
-            if (answerIndex >= answers.length) return;
-            const { trigger, answer } = answers[answerIndex];
-            if (buffer.includes(trigger)) {
-              answerIndex++;
-              buffer = '';
-              setTimeout(() => {
-                proc.stdin.write(answer + '\n');
-              }, 1000);
+          mkdir -p ./twa
+          cat > ./twa/twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.connecthub.app",
+            "host": "connecthub40.pages.dev",
+            "name": "ConnectHub",
+            "launcherName": "ConnectHub",
+            "display": "standalone",
+            "orientation": "portrait-primary",
+            "themeColor": "#0A0A0A",
+            "backgroundColor": "#FFFC00",
+            "enableNotifications": false,
+            "startUrl": "/",
+            "iconUrl": "https://connecthub40.pages.dev/icon-512.png",
+            "maskableIconUrl": "https://connecthub40.pages.dev/icon-512.png",
+            "appVersionCode": 1,
+            "appVersionName": "1",
+            "shortcuts": [],
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://connecthub40.pages.dev/manifest.json",
+            "fallbackType": "customtabs",
+            "features": {},
+            "alphaDependencies": {"enabled": false},
+            "enableSiteSettingsShortcut": true,
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://connecthub40.pages.dev/",
+            "minSdkVersion": 24,
+            "signingKey": {
+              "path": "./android.keystore",
+              "alias": "android"
             }
           }
+          EOF
 
-          proc.stdout.on('data', tryAnswer);
-          proc.stderr.on('data', tryAnswer);
+      - name: Install expect
+        run: sudo apt-get install -y expect
 
-          proc.on('close', (code) => {
-            console.log('Process exited with code', code);
-            process.exit(code);
-          });
-          NODEJS
+      - name: Generate project from manifest
+        run: |
+          cd twa
+          bubblewrap update
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
       - name: Build APK
         run: |
-          node << 'NODEJS'
-          const { spawn } = require('child_process');
-          const proc = spawn('sh', ['-c', 'cd twa && bubblewrap build'], {
-            stdio: ['pipe', 'pipe', 'pipe']
-          });
-
-          let buffer = '';
-
-          const answers = [
-            { trigger: 'Password for the Key Store', answer: 'connecthub123' },
-            { trigger: 'Password for the Key:',      answer: 'connecthub123' },
-            { trigger: 'license',                    answer: 'y' },
-          ];
-
-          let answerIndex = 0;
-
-          function tryAnswer(data) {
-            buffer += data.toString();
-            process.stdout.write(data);
-            if (answerIndex >= answers.length) return;
-            const { trigger, answer } = answers[answerIndex];
-            if (buffer.includes(trigger)) {
-              answerIndex++;
-              buffer = '';
-              setTimeout(() => {
-                proc.stdin.write(answer + '\n');
-              }, 1000);
-            }
+          cat > /tmp/bubblewrap_build.exp << 'EOF'
+          #!/usr/bin/expect -f
+          set timeout 600
+          spawn sh -c "cd twa && bubblewrap build"
+          expect {
+            "install the JDK"              { send "y\r"; exp_continue }
+            "install the Android SDK"      { send "y\r"; exp_continue }
+            "agree to the Android SDK"     { send "y\r"; exp_continue }
+            "create a signing key"         { send "y\r"; exp_continue }
+            "First and Last names:"        { send "ConnectHub Dev\r"; exp_continue }
+            "Organizational Unit:"         { send "Dev\r"; exp_continue }
+            "Organization:"                { send "ConnectHub\r"; exp_continue }
+            "Country Code:"                { send "US\r"; exp_continue }
+            "Password for the Key Store"   { send "connecthub123\r"; exp_continue }
+            "Password for the Key:"        { send "connecthub123\r"; exp_continue }
+            eof
           }
-
-          proc.stdout.on('data', tryAnswer);
-          proc.stderr.on('data', tryAnswer);
-
-          proc.on('close', (code) => {
-            console.log('Process exited with code', code);
-            process.exit(code);
-          });
-          NODEJS
+          EOF
+          chmod +x /tmp/bubblewrap_build.exp
+          /tmp/bubblewrap_build.exp
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
