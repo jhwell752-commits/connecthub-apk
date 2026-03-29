@@ -30,6 +30,7 @@ jobs:
             "URL path:"                    { send "/\r"; exp_continue }
             "Application ID:"              { send "com.connecthub.app\r"; exp_continue }
             "App name:"                    { send "ConnectHub\r"; exp_continue }
+            "version code"                 { send "1\r"; exp_continue }
             "Display mode:"                { send "\r"; exp_continue }
             "Orientation:"                 { send "\r"; exp_continue }
             "theme color"                  { send "\r"; exp_continue }
