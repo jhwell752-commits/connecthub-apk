@@ -52,6 +52,7 @@ jobs:
             }
           }
           EOF
+          sha256sum ./twa/twa-manifest.json | awk '{print $1}' > ./twa/.manifest-checksum
 
       - name: Build APK
         run: |
@@ -63,6 +64,7 @@ jobs:
             "install the JDK"              { send "y\r"; exp_continue }
             "install the Android SDK"      { send "y\r"; exp_continue }
             "agree to the Android SDK"     { send "y\r"; exp_continue }
+            "regenerate your project"      { send "y\r"; exp_continue }
             "create a signing key"         { send "y\r"; exp_continue }
             "First and Last names:"        { send "ConnectHub Dev\r"; exp_continue }
             "Organizational Unit:"         { send "Dev\r"; exp_continue }
