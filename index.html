@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConnectHub</title>
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ConnectHub">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+/* ══ BASE ══ */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:100vh;color:#1a1a1a;}
+
+/* ══ AUTH ══ */
+#authCard{background:#fff;border:none;box-shadow:0 2px 24px rgba(0,0,0,.10);}
+#authCard input{background:#f5f5f5;border:1.5px solid #e5e5e5;color:#1a1a1a;border-radius:12px;padding:.8rem 1rem;width:100%;font-size:.95rem;outline:none;transition:border .2s;}
+#authCard input::placeholder{color:#aaa;}
+#authCard input:focus{border-color:#FFFC00;background:#fff;}
+.auth-logo{font-size:3rem;margin-bottom:.5rem;}
+.auth-title{font-size:2rem;font-weight:900;color:#1a1a1a;}
+.auth-sub{color:#888;font-size:.85rem;margin-top:.25rem;}
+
+/* ══ BUTTONS ══ */
+.btn-snap{background:#FFFC00;color:#000;font-weight:800;border:none;cursor:pointer;transition:opacity .15s;}
+.btn-snap:hover{opacity:.85;}
+.btn-ghost{background:rgba(0,0,0,0.06);color:#333;border:none;cursor:pointer;transition:background .15s;}
+.btn-ghost:hover{background:rgba(0,0,0,0.10);}
+.btn-red{background:#ff4d4d;color:#fff;border:none;cursor:pointer;border-radius:8px;}
+.btn-red:hover{background:#e03333;}
+.btn-green{background:#00c853;color:#fff;border:none;cursor:pointer;}
+.btn-green:hover{background:#00a846;}
+.btn-purple{background:#7c4dff;color:#fff;border:none;cursor:pointer;}
+.btn-purple:hover{background:#6635e0;}
+
+/* ══ TOP NAV (Snapchat-style) ══ */
+.top-nav{
+  background:#fff;
+  border-bottom:1.5px solid #f0f0f0;
+  padding:0 1rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:52px;
+  position:sticky;top:0;z-index:100;
+}
+.top-nav-left{display:flex;align-items:center;gap:.5rem;}
+.top-nav-center{position:absolute;left:50%;transform:translateX(-50%);font-size:1.5rem;}
+.top-nav-right{display:flex;align-items:center;gap:.25rem;}
+.nav-icon-btn{background:none;border:none;cursor:pointer;color:#1a1a1a;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:background .15s;}
+.nav-icon-btn:hover{background:#f5f5f5;}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FFFC00,#FFD700);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;cursor:pointer;}
+
+/* ══ MAIN LAYOUT ══ */
+#mainApp{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+.app-body{display:flex;flex:1;overflow:hidden;}
+
+/* ══ LEFT SIDEBAR ══ */
+.sidebar{
+  width:280px;flex-shrink:0;
+  background:#fff;
+  border-right:1.5px solid #f0f0f0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.sidebar-header{padding:.75rem 1rem .5rem;border-bottom:1px solid #f5f5f5;}
+.sidebar-search{
+  display:flex;align-items:center;gap:.5rem;
+  background:#f5f5f5;border-radius:999px;
+  padding:.45rem .9rem;margin:.5rem 0 .25rem;
+}
+.sidebar-search input{background:none;border:none;outline:none;font-size:.88rem;color:#1a1a1a;flex:1;}
+.sidebar-search input::placeholder{color:#aaa;}
+.sidebar-search i{color:#aaa;font-size:.85rem;}
+
+/* Story row */
+.story-row{display:flex;gap:.75rem;padding:.6rem 1rem;overflow-x:auto;border-bottom:1px solid #f5f5f5;scrollbar-width:none;}
+.story-row::-webkit-scrollbar{display:none;}
+.story-bubble{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;}
+.story-ring{width:52px;height:52px;border-radius:50%;padding:2.5px;background:linear-gradient(135deg,#FFFC00,#ff6b00);flex-shrink:0;}
+.story-ring-inner{width:100%;height:100%;border-radius:50%;background:#f0f0f0;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;color:#555;overflow:hidden;}
+.story-name{font-size:.62rem;font-weight:600;color:#555;max-width:52px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Friend rows */
+.friends-scroll{flex:1;overflow-y:auto;padding:.25rem 0;}
+.friends-scroll::-webkit-scrollbar{width:4px;}
+.friends-scroll::-webkit-scrollbar-thumb{background:#e5e5e5;border-radius:2px;}
+
+.friend-row{display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;cursor:pointer;transition:background .12s;position:relative;}
+.friend-row:hover{background:#fafafa;}
+.friend-row.selected{background:#fffde6;}
+.friend-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#e0e0e0,#c8c8c8);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;color:#555;flex-shrink:0;position:relative;}
+.online-dot{position:absolute;bottom:1px;right:1px;width:11px;height:11px;background:#00c853;border-radius:50%;border:2px solid #fff;}
+.friend-info{flex:1;min-width:0;}
+.friend-name{font-size:.9rem;font-weight:700;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friend-sub{font-size:.75rem;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:.3rem;margin-top:1px;}
+.friend-sub .snap-icon{color:#FFBF00;font-size:.7rem;}
+.friend-sub .streak{color:#ff6b00;font-size:.72rem;font-weight:700;}
+.friend-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+.snap-cam-icon{color:#ccc;font-size:1rem;}
+.unread-dot{width:9px;height:9px;border-radius:50%;background:#FFFC00;border:1.5px solid #fff;}
+
+/* Sidebar section tabs */
+.sidebar-tabs{display:flex;border-bottom:1.5px solid #f0f0f0;}
+.sidebar-tab{flex:1;background:none;border:none;padding:.6rem;font-size:.78rem;font-weight:700;color:#aaa;cursor:pointer;transition:color .15s;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;}
+.sidebar-tab.active{color:#1a1a1a;border-bottom-color:#FFFC00;}
+
+/* ══ CHAT PANEL ══ */
+.chat-panel{flex:1;display:flex;flex-direction:column;background:#fff;overflow:hidden;}
+
+/* Chat header */
+.chat-header{
+  padding:.7rem 1rem;
+  border-bottom:1.5px solid #f0f0f0;
+  display:flex;align-items:center;justify-content:space-between;
+  background:#fff;
+}
+.chat-header-left{display:flex;align-items:center;gap:.6rem;}
+.chat-header-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#e0e0e0,#c8c8c8);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;color:#555;}
+.chat-header-info{}
+.chat-header-name{font-size:.95rem;font-weight:800;color:#1a1a1a;}
+.chat-header-status{font-size:.72rem;color:#00c853;font-weight:600;}
+.chat-header-actions{display:flex;align-items:center;gap:.15rem;}
+.call-icon-btn{background:none;border:none;cursor:pointer;color:#1a1a1a;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;transition:background .15s;}
+.call-icon-btn:hover{background:#f5f5f5;}
+
+/* Empty state */
+.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:.6rem;color:#aaa;}
+.chat-empty-avatar{width:80px;height:80px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#bbb;}
+.chat-empty-name{font-size:1rem;font-weight:700;color:#555;}
+.chat-empty-sub{font-size:.82rem;color:#aaa;}
+
+/* Messages */
+.chat-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.4rem;background:#fff;}
+.chat-messages::-webkit-scrollbar{width:4px;}
+.chat-messages::-webkit-scrollbar-thumb{background:#e5e5e5;border-radius:2px;}
+.bubble-wrap{display:flex;flex-direction:column;position:relative;}
+.bubble-wrap.mine{align-items:flex-end;}
+.bubble-wrap.theirs{align-items:flex-start;}
+.bubble{max-width:68%;padding:.5rem .9rem;font-size:.88rem;word-break:break-word;border-radius:1.1rem;}
+.bubble.mine{background:#7c4dff;color:#fff;border-radius:1.1rem 1.1rem 0 1.1rem;}
+.bubble.theirs{background:#f5f5f5;color:#1a1a1a;border-radius:1.1rem 1.1rem 1.1rem 0;}
+.bubble.system{background:none;color:#aaa;font-size:.75rem;text-align:center;padding:.25rem .5rem;margin:auto;}
+.snap-img{max-width:220px;border-radius:.75rem;display:block;margin-top:.3rem;border:2px solid #FFFC00;}
+.bubble-time{font-size:.62rem;color:#bbb;margin-top:2px;}
+.del-btn{opacity:0;position:absolute;top:0;background:rgba(239,68,68,0.9);border:none;color:#fff;border-radius:999px;width:20px;height:20px;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .15s;line-height:1;padding:0;}
+.bubble-wrap:hover .del-btn,.bubble-wrap:focus-within .del-btn{opacity:1;}
+.bubble-wrap.mine .del-btn{right:-10px;}
+.bubble-wrap.theirs .del-btn{left:-10px;}
+@media(max-width:640px){.del-btn{opacity:1;}}
+
+/* Chat input */
+.chat-input-bar{
+  padding:.6rem 1rem;
+  border-top:1.5px solid #f0f0f0;
+  display:flex;align-items:center;gap:.5rem;
+  background:#fff;
+}
+.chat-input-bar input{
+  flex:1;background:#f5f5f5;border:none;border-radius:999px;
+  padding:.55rem 1rem;color:#1a1a1a;font-size:.88rem;outline:none;
+  transition:background .2s;
+}
+.chat-input-bar input:focus{background:#efefef;}
+.chat-input-bar input::placeholder{color:#aaa;}
+.input-icon-btn{background:none;border:none;cursor:pointer;color:#888;font-size:1.15rem;padding:0 3px;display:flex;align-items:center;transition:color .15s;}
+.input-icon-btn:hover{color:#333;}
+.send-btn{background:#FFFC00;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#000;font-size:.9rem;flex-shrink:0;transition:opacity .15s;}
+.send-btn:hover{opacity:.85;}
+
+/* ══ SCORE BADGE ══ */
+.score-badge{background:#fffde0;color:#b8860b;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid #FFD700;}
+
+/* ══ DESKTOP SIDEBAR TABS (chats/groups/friends) ══ */
+.sidebar-nav-tabs{display:flex;gap:0;border-bottom:1.5px solid #f0f0f0;}
+.snav-tab{flex:1;background:none;border:none;border-bottom:2.5px solid transparent;padding:.55rem .5rem;font-size:.78rem;font-weight:700;color:#aaa;cursor:pointer;margin-bottom:-1.5px;transition:color .15s;}
+.snav-tab.active{color:#1a1a1a;border-bottom-color:#FFFC00;}
+
+/* ══ GROUPS & FRIENDS panels (inside sidebar) ══ */
+.panel-scroll{flex:1;overflow-y:auto;padding:.75rem;}
+.section-card{background:#fafafa;border:1.5px solid #f0f0f0;border-radius:14px;padding:1rem;margin-bottom:.75rem;}
+.section-card h3{font-size:.82rem;font-weight:800;color:#1a1a1a;margin-bottom:.65rem;}
+.section-card input,.section-card select{background:#fff;border:1.5px solid #e5e5e5;border-radius:10px;padding:.5rem .75rem;color:#1a1a1a;font-size:.85rem;outline:none;transition:border .2s;}
+.section-card input:focus,.section-card select:focus{border-color:#FFFC00;}
+.section-card input::placeholder{color:#bbb;}
+/* inputs that should fill full width (group name, group select) */
+.section-card input.full-w,.section-card select{width:100%;}
+.req-item{background:#fff;border:1.5px solid #f0f0f0;border-radius:10px;padding:.5rem .75rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;}
+.req-item span{font-size:.82rem;font-weight:600;color:#333;}
+
+/* ══ GROUP MESSAGES area in main panel ══ */
+#groupMessages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.4rem;}
+
+/* ══ ADD FRIEND INPUT: override width:100% so it flexes inside the row ══ */
+#addFriendInput{flex:1 1 0!important;width:auto!important;min-width:0!important;}
+
+/* ══ MOBILE ══ */
+@media(max-width:640px){
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:60px;width:82vw;max-width:300px;
+    z-index:150;transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:none;
+  }
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 40px rgba(0,0,0,.12);}
+  .friends-overlay{display:none;position:fixed;inset:0;bottom:60px;background:rgba(0,0,0,.25);z-index:149;}
+  .friends-overlay.show{display:block;}
+  .chat-panel{height:calc(100vh - 112px);}
+  .top-nav{display:none;}
+  .mobile-top-bar{display:flex!important;}
+  #tab-groups-panel,#tab-friends-panel{padding-bottom:0;}
+}
+.mobile-top-bar{
+  display:none;background:#fff;border-bottom:1.5px solid #f0f0f0;
+  padding:.6rem 1rem;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+#mobileMenuBtn{background:none;border:none;color:#1a1a1a;font-size:1.25rem;cursor:pointer;padding:4px;}
+
+/* ══ MOBILE BOTTOM NAV ══ */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#fff;border-top:1.5px solid #f0f0f0;height:60px;}
+.mobile-nav button{flex:1;background:none;border:none;color:#bbb;padding:.5rem .5rem .4rem;font-size:.6rem;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s;text-transform:uppercase;letter-spacing:.03em;}
+.mobile-nav button i{font-size:1.25rem;}
+.mobile-nav button.tab-active{color:#1a1a1a;}
+@media(max-width:640px){
+  .mobile-nav{display:flex!important;}
+  #mainApp{padding-bottom:0;}
+}
+.nav-badge{background:#ff4d4d;color:#fff;font-size:.55rem;font-weight:700;padding:1px 4px;border-radius:999px;position:absolute;top:6px;margin-left:10px;}
+
+/* ══ INCOMING CALL BANNER ══ */
+#incomingBar{display:none;position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#fff;border:1.5px solid #f0f0f0;box-shadow:0 4px 24px rgba(0,0,0,.15);color:#1a1a1a;padding:10px 18px;border-radius:999px;z-index:99998;gap:10px;align-items:center;white-space:nowrap;}
+#incomingBar.show{display:flex;}
+
+/* ══ VIDEO MODAL ══ */
+#videoModal{display:none;position:fixed;inset:0;background:#000;z-index:9000;flex-direction:column;}
+#videoModal.open{display:flex;}
+.call-box{display:flex;flex-direction:column;width:100%;height:100%;padding:0;background:#000;border-radius:0;border:none;position:relative;}
+.call-top-bar{position:absolute;top:0;left:0;right:0;z-index:10;padding:.75rem 1.25rem;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to bottom,rgba(0,0,0,.75) 0%,transparent 100%);}
+.vid-wrap{flex:1;position:relative;overflow:hidden;background:#050510;}
+#remoteVideo{width:100%;height:100%;object-fit:cover;display:block;background:#050510;}
+#localVideo{position:absolute;bottom:100px;right:16px;width:100px;height:140px;border-radius:1rem;border:2px solid #FFFC00;object-fit:cover;background:#050510;transition:opacity .3s;z-index:5;cursor:grab;touch-action:none;user-select:none;transform:scaleX(-1);}
+#localVideo.cam-off{opacity:0;}
+.call-controls{position:absolute;bottom:0;left:0;right:0;z-index:10;display:flex;gap:.75rem;justify-content:center;padding:1rem 1rem 1.5rem;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 100%);flex-wrap:wrap;}
+.ctrl-btn{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;transition:transform .15s,background .2s;color:#fff;}
+.ctrl-btn:hover{transform:scale(1.08);}
+.ctrl-btn.off{background:rgba(255,255,255,0.22);}
+.ctrl-btn.on{background:rgba(255,252,0,0.25);color:#FFFC00;border:1px solid rgba(255,252,0,0.4);}
+.ctrl-btn.end{background:#ff4d4d;width:64px;height:64px;font-size:1.3rem;}
+.ctrl-btn.rec{background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.4);}
+.ctrl-btn.rec.recording{background:#ef4444;color:#fff;animation:recPulse 1.2s infinite;}
+@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.6);}50%{box-shadow:0 0 0 8px rgba(239,68,68,0);}}
+
+/* ══ PiP ══ */
+#pipOverlay{display:none;position:fixed;top:16px;right:16px;z-index:99999;width:200px;border-radius:1rem;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4);background:#111;border:2px solid #FFFC00;cursor:grab;user-select:none;}
+#pipOverlay:active{cursor:grabbing;}
+#pipOverlay.show{display:block;}
+#pipRemoteThumb{width:100%;height:128px;object-fit:cover;display:block;background:#050510;}
+#pipLocalThumb{position:absolute;top:6px;right:6px;width:52px;height:40px;border-radius:.4rem;object-fit:cover;background:#050510;border:1px solid #FFFC00;transform:scaleX(-1);}
+.pip-bar{background:rgba(0,0,0,0.8);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;}
+.pip-name{font-size:.7rem;font-weight:700;color:#FFFC00;}
+.pip-timer{font-size:.7rem;color:rgba(255,255,255,0.6);font-family:monospace;}
+.pip-end{background:#ff4d4d;border:none;border-radius:999px;color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;cursor:pointer;}
+.pip-expand{background:rgba(255,255,255,0.15);border:none;border-radius:999px;color:#fff;font-size:.65rem;padding:2px 6px;cursor:pointer;margin-right:4px;}
+
+/* ══ SNAP CAMERA ══ */
+#snapModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.96);flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
+#snapModal.open{display:flex;}
+#snapViewfinder{transform:scaleX(-1);}
+#snapCanvas{transform:none;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+</style>
+</head>
+<body>
+
+<!-- ══ INCOMING CALL BANNER ══ -->
+<div id="incomingBar">
+  <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;animation:pulse 1s infinite;">
+    <i class="fas fa-phone-alt text-white text-sm"></i>
+  </div>
+  <div>
+    <p style="font-size:.8rem;font-weight:700;" id="callerLabel">Someone</p>
+    <p style="font-size:.7rem;color:rgba(0,0,0,0.5);" id="callTypeLabel">Video call incoming…</p>
+  </div>
+  <button id="acceptBtn" class="btn-green" style="border-radius:999px;padding:6px 16px;font-size:.8rem;font-weight:700;">Accept</button>
+  <button id="declineBtn" class="btn-red" style="border-radius:999px;padding:6px 16px;font-size:.8rem;font-weight:700;">Decline</button>
+</div>
+
+<!-- ══ PiP OVERLAY ══ -->
+<div id="pipOverlay">
+  <div style="position:relative;">
+    <video id="pipRemoteThumb" autoplay playsinline muted></video>
+    <video id="pipLocalThumb" autoplay muted playsinline></video>
+  </div>
+  <div class="pip-bar">
+    <span class="pip-name" id="pipName">Call</span>
+    <span class="pip-timer" id="pipTimer">0:00</span>
+    <button class="pip-expand" id="pipExpandBtn" title="Expand"><i class="fas fa-expand-alt"></i></button>
+    <button class="pip-end" id="pipEndBtn">End</button>
+  </div>
+</div>
+
+<!-- ══ VIDEO CALL MODAL — FULLSCREEN ══ -->
+<div id="videoModal">
+  <div class="call-box">
+    <!-- Top bar -->
+    <div class="call-top-bar">
+      <div>
+        <p style="font-size:.75rem;color:rgba(255,255,255,0.55);" id="callTypeDisplay">Video Call</p>
+        <p style="font-weight:700;font-size:1.05rem;color:#fff;" id="callWithLabel">—</p>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <span id="recIndicator" style="display:none;background:#ef4444;color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:999px;animation:recPulse 1.2s infinite;">● REC</span>
+        <span style="font-size:.85rem;color:rgba(255,255,255,0.7);font-family:monospace;" id="callTimerDisplay">0:00</span>
+        <span id="callStatus" style="font-size:.7rem;color:#FFFC00;font-weight:600;background:rgba(255,252,0,0.1);padding:2px 8px;border-radius:999px;">Connecting…</span>
+      </div>
+    </div>
+    <!-- Video area -->
+    <div class="vid-wrap">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <video id="localVideo" autoplay muted playsinline></video>
+      <!-- Audio-only overlay -->
+      <div id="audioOnlyOverlay" style="display:none;position:absolute;inset:0;background:#0d0d1a;align-items:center;justify-content:center;flex-direction:column;gap:.75rem;">
+        <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:700;" id="callAvatarBig">?</div>
+        <p style="font-weight:700;font-size:1.1rem;color:#fff;" id="callAvatarName">—</p>
+        <p style="font-size:.85rem;color:rgba(255,255,255,0.5);">Audio call in progress</p>
+      </div>
+    </div>
+    <!-- Controls overlay -->
+    <div class="call-controls">
+      <div class="ctrl-btn on" id="micBtn" title="Mute mic" onclick="toggleMic()">
+        <i class="fas fa-microphone" id="micIcon"></i>
+      </div>
+      <div class="ctrl-btn on" id="camBtn" title="Toggle camera" onclick="toggleCam()">
+        <i class="fas fa-video" id="camIcon"></i>
+      </div>
+      <div class="ctrl-btn off" id="flipBtn" title="Flip camera" onclick="flipCallCamera()" style="display:none;">
+        <i class="fas fa-sync-alt"></i>
+      </div>
+      <div class="ctrl-btn rec" id="recBtn" title="Record call" onclick="toggleRecording()">
+        <i class="fas fa-circle" id="recIcon"></i>
+      </div>
+      <div class="ctrl-btn off" id="shareScreenBtn" title="Share screen" onclick="toggleScreenShare()">
+        <i class="fas fa-desktop" id="shareScreenIcon"></i>
+      </div>
+      <div class="ctrl-btn end" onclick="endCall()" title="End call">
+        <i class="fas fa-phone-slash"></i>
+      </div>
+      <div class="ctrl-btn off" onclick="minimiseToPip()" title="Minimise / PiP">
+        <i class="fas fa-compress-alt"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ SNAP CAMERA MODAL ══ -->
+<div id="snapModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
+  <div style="position:relative;width:min(100vw,480px);border-radius:1.25rem;overflow:hidden;background:#0a0a1a;border:1px solid rgba(255,255,255,0.1);">
+    <video id="snapViewfinder" autoplay playsinline muted style="width:100%;max-height:400px;object-fit:cover;display:block;background:#050510;"></video>
+    <canvas id="snapCanvas" style="display:none;width:100%;max-height:400px;object-fit:cover;"></canvas>
+    <div id="snapCountdown" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);">
+      <span id="snapCountdownNum" style="font-size:5rem;font-weight:900;color:#FFFC00;text-shadow:0 0 30px rgba(255,252,0,0.6);"></span>
+    </div>
+    <div id="snapFlash" style="display:none;position:absolute;inset:0;background:#fff;opacity:0;border-radius:1.25rem;pointer-events:none;"></div>
+  </div>
+  <div id="snapLiveControls" style="display:flex;gap:1rem;align-items:center;">
+    <button onclick="closeSnapCamera()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:999px;padding:8px 20px;cursor:pointer;font-size:.85rem;font-weight:600;">✕ Cancel</button>
+    <button id="shutterBtn" onclick="takeSnap()" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#FFFC00,#FFD700);border:4px solid rgba(255,255,255,0.3);cursor:pointer;font-size:1.6rem;display:flex;align-items:center;justify-content:center;">📸</button>
+    <button id="flipCamBtn" onclick="flipCamera()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-size:.85rem;">🔄 Flip</button>
+  </div>
+  <div id="snapPreviewControls" style="display:none;flex-direction:column;align-items:center;gap:.75rem;width:min(100vw,480px);padding:0 1rem;">
+    <p style="color:rgba(255,255,255,0.5);font-size:.78rem;">Send this snap?</p>
+    <div style="display:flex;gap:.75rem;width:100%;">
+      <button onclick="retakeSnap()" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:.75rem;padding:.7rem;cursor:pointer;font-weight:600;">↩ Retake</button>
+      <button onclick="sendSnapFromCamera()" style="flex:1;background:linear-gradient(135deg,#FFFC00,#FFD700);color:#000;border:none;border-radius:.75rem;padding:.7rem;cursor:pointer;font-weight:800;font-size:.95rem;">Send Snap ⚡</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH ══ -->
+<div id="authCard" style="max-width:400px;margin:5rem auto;padding:2.5rem;border-radius:20px;">
+  <div style="text-align:center;margin-bottom:2rem;">
+    <div class="auth-logo">👻</div>
+    <div class="auth-title">ConnectHub</div>
+    <div class="auth-sub">Chat · Snaps · Video Calls</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:.75rem;">
+    <input id="authUser" placeholder="Username">
+    <input id="authPass" type="password" placeholder="Password">
+    <div style="display:flex;gap:.75rem;">
+      <button id="loginBtn" class="btn-snap" style="flex:1;padding:.85rem;border-radius:12px;font-size:.92rem;font-weight:800;">
+        Login
+      </button>
+      <button id="signupBtn" style="flex:1;background:#f5f5f5;color:#333;border:1.5px solid #e5e5e5;padding:.85rem;border-radius:12px;font-size:.92rem;cursor:pointer;font-weight:800;">
+        Sign Up
+      </button>
+    </div>
+    <div id="authMsg" style="text-align:center;font-size:.82rem;min-height:1.2rem;color:#555;"></div>
+
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="mainApp" style="display:none;">
+
+  <!-- Mobile top bar -->
+  <div class="mobile-top-bar" id="mobileTopBar">
+    <button id="mobileMenuBtn" onclick="openFriendsPanel()"><i class="fas fa-bars"></i></button>
+    <span style="font-size:1.4rem;">👻</span>
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <span class="score-badge" id="headerScore">0</span>
+      <button class="btn-red" id="logoutBtnMobile" style="padding:.35rem .75rem;border-radius:8px;font-size:.78rem;font-weight:700;">Out</button>
+    </div>
+  </div>
+
+  <!-- Desktop top nav -->
+  <div class="top-nav">
+    <div class="top-nav-left">
+      <div class="user-avatar" id="avatarCircle">?</div>
+      <span style="font-size:.88rem;font-weight:700;color:#1a1a1a;" id="headerUsername"></span>
+      <span class="score-badge" id="headerScoreDesktop">0</span>
+    </div>
+    <div class="top-nav-center">👻</div>
+    <div class="top-nav-right">
+      <button class="nav-icon-btn" title="Add friend" onclick="switchSidebarTab('friends')"><i class="fas fa-user-plus"></i></button>
+      <button class="nav-icon-btn" title="Groups" onclick="switchSidebarTab('groups')"><i class="fas fa-users"></i></button>
+      <button class="btn-red" id="logoutBtn" style="padding:.38rem .9rem;border-radius:10px;font-size:.8rem;font-weight:700;margin-left:.25rem;">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Friends slide-in overlay (mobile) -->
+  <div class="friends-overlay" id="friendsOverlay" onclick="closeFriendsPanel()"></div>
+
+  <!-- App body: sidebar + chat panel -->
+  <div class="app-body">
+
+    <!-- ══ SIDEBAR ══ -->
+    <div class="sidebar" id="sidebarPanel">
+      <!-- Search bar -->
+      <div style="padding:.6rem .75rem .25rem;">
+        <div class="sidebar-search">
+          <i class="fas fa-search"></i>
+          <input placeholder="Search" id="sidebarSearch">
+        </div>
+      </div>
+
+      <!-- Story bubbles row -->
+      <div class="story-row" id="storyRow"></div>
+
+      <!-- Sidebar nav tabs -->
+      <div class="sidebar-nav-tabs">
+        <button class="snav-tab active" data-stab="chats" onclick="switchSidebarTab('chats',this)">Chats</button>
+        <button class="snav-tab" data-stab="groups" onclick="switchSidebarTab('groups',this)">Groups</button>
+        <button class="snav-tab" data-stab="friends" onclick="switchSidebarTab('friends',this)" style="position:relative;">Friends<span id="reqBadge" style="display:none;background:#ff4d4d;color:#fff;font-size:.55rem;font-weight:700;padding:1px 4px;border-radius:999px;margin-left:3px;vertical-align:middle;">0</span></button>
+      </div>
+
+      <!-- Chats list -->
+      <div id="tab-chats-sidebar" class="friends-scroll">
+        <div id="friendsList"></div>
+      </div>
+
+      <!-- Groups panel -->
+      <div id="tab-groups-sidebar" class="panel-scroll" style="display:none;">
+        <div class="section-card">
+          <h3><i class="fas fa-plus" style="margin-right:.35rem;color:#FFFC00;"></i>New Group</h3>
+          <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+            <input id="newGroupName" placeholder="Group name…" class="full-w" style="flex:1;">
+            <button class="btn-snap" id="createGroupBtn" style="padding:.45rem .85rem;border-radius:10px;font-size:.8rem;font-weight:800;white-space:nowrap;">Create</button>
+          </div>
+        </div>
+        <div class="section-card">
+          <h3><i class="fas fa-users" style="margin-right:.35rem;color:#FFFC00;"></i>Join Group</h3>
+          <div style="display:flex;gap:.5rem;">
+            <select id="groupSelect" style="flex:1;"></select>
+            <button class="btn-purple" id="joinGroupBtn" style="padding:.45rem .85rem;border-radius:10px;font-size:.8rem;font-weight:700;">Join</button>
+          </div>
+          <p style="font-size:.75rem;color:#888;margin-top:.5rem;">Active: <span id="activeGroupName" style="color:#333;font-weight:700;">None</span></p>
+        </div>
+      </div>
+
+      <!-- Friends panel -->
+      <div id="tab-friends-sidebar" class="panel-scroll" style="display:none;">
+        <div class="section-card">
+          <h3><i class="fas fa-user-plus" style="margin-right:.35rem;color:#FFFC00;"></i>Add Friend</h3>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <input
+              id="addFriendInput"
+              type="text"
+              placeholder="Username…"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+              inputmode="text"
+            >
+            <button class="btn-snap" id="sendReqBtn" style="padding:.45rem .85rem;border-radius:10px;font-size:.8rem;font-weight:800;white-space:nowrap;flex-shrink:0;">Add</button>
+          </div>
+          <p id="addMsg" style="font-size:.75rem;margin-top:.4rem;min-height:1rem;color:#555;"></p>
+        </div>
+        <div class="section-card">
+          <h3><i class="fas fa-bell" style="margin-right:.35rem;color:#FFFC00;"></i>Requests</h3>
+          <div id="requestsList"></div>
+        </div>
+        <div class="section-card">
+          <h3><i class="fas fa-users" style="margin-right:.35rem;color:#FFFC00;"></i>My Friends</h3>
+          <div id="allFriendsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.6rem;"></div>
+        </div>
+      </div>
+    </div><!-- /sidebar -->
+
+    <!-- ══ MAIN CONTENT PANEL ══ -->
+    <div class="chat-panel" id="mainContentPanel">
+
+      <!-- Chat header (shown when a friend is selected) -->
+      <div class="chat-header" id="chatHeaderBar" style="display:none;">
+        <div class="chat-header-left">
+          <div class="chat-header-avatar" id="chatHeaderAvatar">?</div>
+          <div class="chat-header-info">
+            <div class="chat-header-name" id="chatWithName">—</div>
+            <div id="chatFriendScore" style="font-size:.7rem;color:#888;"></div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button id="audioCallBtn" class="call-icon-btn" style="display:none;" onclick="startCall('audio')" title="Audio call"><i class="fas fa-phone-alt"></i></button>
+          <button id="callFriendBtn" class="call-icon-btn" style="display:none;" onclick="startCall('video')" title="Video call"><i class="fas fa-video"></i></button>
+          <button class="call-icon-btn" style="display:none;" id="callMoreBtn" title="More"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="chat-empty" id="chatEmptyState">
+        <div class="chat-empty-avatar" id="chatEmptyAvatar">👻</div>
+        <div class="chat-empty-name" id="chatEmptyName">Select a friend to chat</div>
+        <div class="chat-empty-sub">Your messages will appear here</div>
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-messages" id="chatMessages" style="display:none;"></div>
+
+      <!-- Group messages (shared area) -->
+      <div id="groupMessages" style="display:none;flex:1;overflow-y:auto;padding:1rem;flex-direction:column;gap:.4rem;background:#fff;"></div>
+
+      <!-- Chat input bar -->
+      <div class="chat-input-bar" id="chatInputBar" style="display:none;">
+        <button class="input-icon-btn" id="openSnapCamBtn" title="Take a snap" onclick="openSnapCamera()"><i class="fas fa-camera"></i></button>
+        <label class="input-icon-btn" title="Send image">
+          <i class="fas fa-image"></i>
+          <input type="file" id="galleryInput" accept="image/*" style="display:none;">
+        </label>
+        <input id="msgInput" placeholder="Send a chat…">
+        <button class="send-btn" id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button>
+      </div>
+
+      <!-- Group input bar -->
+      <div class="chat-input-bar" id="groupInputBar" style="display:none;">
+        <input id="groupMsgInput" placeholder="Group message…" style="flex:1;background:#f5f5f5;border:none;border-radius:999px;padding:.55rem 1rem;color:#1a1a1a;font-size:.88rem;outline:none;">
+        <button class="send-btn" id="sendGroupMsgBtn"><i class="fas fa-paper-plane"></i></button>
+      </div>
+
+    </div><!-- /main content -->
+  </div><!-- /app-body -->
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav" id="mobileNav">
+  <button data-stab="chats" class="tab-active" onclick="switchSidebarTab('chats',this,true)">
+    <i class="fas fa-comments"></i>Chats
+  </button>
+  <button data-stab="groups" onclick="switchSidebarTab('groups',this,true)">
+    <i class="fas fa-users"></i>Groups
+  </button>
+  <button data-stab="friends" onclick="switchSidebarTab('friends',this,true)" style="position:relative;">
+    <i class="fas fa-user-friends"></i>Friends
+    <span id="navReqBadge" style="display:none;position:absolute;top:6px;right:calc(50% - 18px);background:#ff4d4d;color:#fff;font-size:.55rem;font-weight:700;padding:1px 4px;border-radius:999px;">0</span>
+  </button>
+</nav>
+
+<script>
+const SUPABASE_URL='https://osbainusktkbghzespcc.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zYmFpbnVza3RrYmdoemVzcGNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3ODY1NTYsImV4cCI6MjA5MDM2MjU1Nn0.815OxISgtIGSL3f1B3oAq2b5YP3TZSbNsEwYfo2D7ls';
+if(!window.supabase){
+  document.getElementById('authMsg').textContent='Error: Supabase failed to load. Check your internet connection and refresh.';
+  document.getElementById('authMsg').style.color='#ef4444';
+  throw new Error('Supabase not loaded');
+}
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+/* ── State ── */
+let me=null,friendId=null,friendName=null,groupId=null;
+let _lastMsgCount={};
+let peer=null,currentCall=null,localStream=null,incomingCall=null;
+let callStartTime=null,callTimerInterval=null;
+let isMicOn=true,isCamOn=true,isVideoCall=true;
+let pipDragOffX=0,pipDragOffY=0,pipDragging=false;
+let _callFacingMode='user';
+let _screenShareStream=null,_isScreenSharing=false;
+
+/* ── Utils ── */
+function esc(s){return s?String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])):''}
+function toast(msg,ok=false,id='authMsg'){
+  const el=document.getElementById(id);if(!el)return;
+  el.textContent=msg;el.style.color=ok?'#22c55e':'#ef4444';
+  setTimeout(()=>{el.textContent='';},3500);
+}
+function fmtTime(ts){return ts?new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):''}
+function fmtDuration(sec){
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  if(h>0) return `${h}h ${m}m ${s}s`;
+  if(m>0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+function fmtCallTimer(sec){
+  const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;
+  if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+/* ── AUTH ── */
+function setAuthLoading(loading){
+  const lb=document.getElementById('loginBtn');
+  const sb2=document.getElementById('signupBtn');
+  lb.disabled=loading; sb2.disabled=loading;
+  lb.style.opacity=loading?'0.6':'1';
+  sb2.style.opacity=loading?'0.6':'1';
+  if(loading) lb.textContent='Please wait…';
+}
+document.getElementById('loginBtn').onclick=async()=>{
+  const u=document.getElementById('authUser').value.trim();
+  const p=document.getElementById('authPass').value.trim();
+  if(!u||!p)return toast('Fill in all fields');
+  setAuthLoading(true);
+  try{
+    const{data,error}=await sb.from('users').select('*').eq('username',u).eq('password',p);
+    if(error)return toast('DB error: '+error.message);
+    if(!data||!data.length)return toast('Wrong username or password');
+    await boot(data[0]);
+  }catch(e){
+    toast('Error: '+e.message);
+  }finally{
+    setAuthLoading(false);
+    document.getElementById('loginBtn').textContent='Login';
+  }
+};
+document.getElementById('signupBtn').onclick=async()=>{
+  const u=document.getElementById('authUser').value.trim();
+  const p=document.getElementById('authPass').value.trim();
+  if(!u||!p)return toast('Fill in all fields');
+  if(u.length<3)return toast('Username must be at least 3 characters');
+  if(p.length<4)return toast('Password must be at least 4 characters');
+  setAuthLoading(true);
+  try{
+    const{data:ex,error:exErr}=await sb.from('users').select('id').eq('username',u);
+    if(exErr)return toast('DB error: '+exErr.message);
+    if(ex&&ex.length)return toast('Username already taken');
+    const{error}=await sb.from('users').insert([{username:u,password:p,snap_score:0}]);
+    if(error)return toast('Signup failed: '+error.message);
+    toast('Account created! Log in now.',true);
+  }catch(e){
+    toast('Error: '+e.message);
+  }finally{
+    setAuthLoading(false);
+  }
+};
+
+async function boot(user){
+  me=user;
+  document.getElementById('authCard').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  document.getElementById('headerUsername').textContent=me.username;
+  document.getElementById('avatarCircle').textContent=me.username[0].toUpperCase();
+  document.getElementById('headerScore').textContent=me.snap_score||0;
+  document.getElementById('headerScoreDesktop').textContent=me.snap_score||0;
+  buildStoryRow();
+  initPeer();
+  await loadFriendsList();await loadGroups();await loadRequests();
+  startPolling();
+}
+document.getElementById('logoutBtn').onclick=doLogout;
+if(document.getElementById('logoutBtnMobile'))document.getElementById('logoutBtnMobile').onclick=doLogout;
+function doLogout(){
+  if(localStream)localStream.getTracks().forEach(t=>t.stop());
+  if(currentCall)currentCall.close();if(peer)peer.destroy();
+  me=null;friendId=null;groupId=null;
+  hidePip();hideModal();
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('authCard').style.display='block';
+}
+
+/* ── SIDEBAR TAB SWITCHING ── */
+function switchSidebarTab(tab, clickedBtn, fromMobile=false){
+  document.querySelectorAll('.snav-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav button').forEach(b=>b.classList.remove('tab-active'));
+  const desktopTab = document.querySelector('.snav-tab[data-stab="'+tab+'"]');
+  if(desktopTab) desktopTab.classList.add('active');
+  const mobileBtn = document.querySelector('.mobile-nav button[data-stab="'+tab+'"]');
+  if(mobileBtn) mobileBtn.classList.add('tab-active');
+
+  document.getElementById('tab-chats-sidebar').style.display = tab==='chats'?'flex':'none';
+  document.getElementById('tab-groups-sidebar').style.display = tab==='groups'?'flex':'none';
+  document.getElementById('tab-friends-sidebar').style.display = tab==='friends'?'flex':'none';
+
+  if(tab==='friends'){
+    loadRequests();
+    // FIX: focus the add friend input after tab switch, with slight delay for mobile
+    setTimeout(()=>{
+      const inp = document.getElementById('addFriendInput');
+      if(inp) inp.focus();
+    }, 350);
+  }
+
+  if(fromMobile){
+    openFriendsPanel();
+  }
+
+  if(tab==='groups' && groupId){
+    showGroupChat();
+  }
+}
+
+function mobileTab(tab, btn){ switchSidebarTab(tab, btn, true); }
+function openFriendsPanel(){
+  document.getElementById('sidebarPanel').classList.add('open');
+  document.getElementById('friendsOverlay').classList.add('show');
+}
+function closeFriendsPanel(){
+  document.getElementById('sidebarPanel').classList.remove('open');
+  document.getElementById('friendsOverlay').classList.remove('show');
+}
+
+/* ── ADD FRIEND: Enter key support ── */
+document.addEventListener('DOMContentLoaded', function(){
+  var inp = document.getElementById('addFriendInput');
+  if(inp){
+    inp.addEventListener('keypress', function(e){
+      if(e.key==='Enter'){ e.preventDefault(); document.getElementById('sendReqBtn').click(); }
+    });
+  }
+});
+
+/* ── PEER SETUP ── */
+function initPeer(){
+  if(peer)peer.destroy();
+  peer=new Peer('ch_'+me.username,{debug:0});
+  peer.on('open',async id=>{
+    await sb.from('users').update({peer_id:id}).eq('id',me.id);
+    me.peer_id=id;
+  });
+  peer.on('call',call=>{
+    incomingCall=call;
+    const caller=call.peer.replace('ch_','');
+    const isVid=call.metadata?.type!=='audio';
+    document.getElementById('callerLabel').textContent=caller;
+    document.getElementById('callTypeLabel').textContent=isVid?'📹 Video call incoming…':'📞 Audio call incoming…';
+    document.getElementById('incomingBar').classList.add('show');
+  });
+  peer.on('error',e=>console.warn('Peer:',e.type));
+}
+
+/* ── CALL CONTROLS ── */
+function toggleMic(){
+  isMicOn=!isMicOn;
+  if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=isMicOn);
+  document.getElementById('micBtn').className='ctrl-btn '+(isMicOn?'on':'off');
+  document.getElementById('micIcon').className=isMicOn?'fas fa-microphone':'fas fa-microphone-slash';
+}
+function toggleCam(){
+  isCamOn=!isCamOn;
+  if(localStream)localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
+  document.getElementById('camBtn').className='ctrl-btn '+(isCamOn?'on':'off');
+  document.getElementById('camIcon').className=isCamOn?'fas fa-video':'fas fa-video-slash';
+  document.getElementById('localVideo').classList.toggle('cam-off',!isCamOn);
+  if(isCamOn&&!isVideoCall){
+    isVideoCall=true;
+    document.getElementById('audioOnlyOverlay').style.display='none';
+    document.getElementById('callTypeDisplay').textContent='Video Call';
+  }
+}
+
+/* ── FLIP CALL CAMERA ── */
+async function flipCallCamera(){
+  if(!isVideoCall||!currentCall)return;
+  _callFacingMode=_callFacingMode==='user'?'environment':'user';
+  try{
+    const newStream=await _getCallStream('video');
+    const newVidTrack=newStream.getVideoTracks()[0];
+    const sender=currentCall.peerConnection?.getSenders().find(s=>s.track&&s.track.kind==='video');
+    if(sender)await sender.replaceTrack(newVidTrack);
+    if(localStream){
+      localStream.getVideoTracks().forEach(t=>t.stop());
+      localStream.removeTrack(localStream.getVideoTracks()[0]);
+      localStream.addTrack(newVidTrack);
+      const audioTrack=localStream.getAudioTracks()[0];
+      const combined=new MediaStream([newVidTrack,audioTrack].filter(Boolean));
+      localStream=combined;
+    }else{
+      localStream=newStream;
+    }
+    document.getElementById('localVideo').srcObject=localStream;
+    document.getElementById('pipLocalThumb').srcObject=localStream;
+  }catch(e){toast('Camera flip error: '+e.message);}
+}
+
+/* ── SCREEN SHARE ── */
+async function toggleScreenShare(){
+  if(_isScreenSharing){
+    if(_screenShareStream){_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;}
+    _isScreenSharing=false;
+    try{
+      const camStream=await _getCallStream(isVideoCall?'video':'audio');
+      const newVidTrack=camStream.getVideoTracks()[0];
+      if(newVidTrack){
+        const sender=currentCall?.peerConnection?.getSenders().find(s=>s.track&&s.track.kind==='video');
+        if(sender)await sender.replaceTrack(newVidTrack);
+        localStream=camStream;
+        document.getElementById('localVideo').srcObject=localStream;
+        document.getElementById('pipLocalThumb').srcObject=localStream;
+      }
+    }catch(e){}
+    document.getElementById('shareScreenBtn').className='ctrl-btn off';
+    document.getElementById('shareScreenIcon').className='fas fa-desktop';
+    document.getElementById('callTypeDisplay').textContent=isVideoCall?'📹 Video Call':'📞 Audio Call';
+  }else{
+    try{
+      _screenShareStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+      const screenVidTrack=_screenShareStream.getVideoTracks()[0];
+      const pc=currentCall?.peerConnection;
+      if(pc){
+        const sender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
+        if(sender){
+          await sender.replaceTrack(screenVidTrack);
+        }else{
+          pc.addTrack(screenVidTrack,_screenShareStream);
+        }
+      }
+      document.getElementById('localVideo').srcObject=_screenShareStream;
+      _isScreenSharing=true;
+      document.getElementById('shareScreenBtn').className='ctrl-btn on';
+      document.getElementById('shareScreenIcon').className='fas fa-desktop';
+      document.getElementById('callTypeDisplay').textContent='🖥️ Sharing Screen';
+      screenVidTrack.onended=()=>toggleScreenShare();
+    }catch(e){
+      if(e.name!=='NotAllowedError')toast('Screen share error: '+e.message);
+    }
+  }
+}
+
+/* ── DRAGGABLE LOCAL VIDEO ── */
+
+
+/* ── START CALL ── */
+async function _getCallStream(type){
+  const isVid=(type==='video');
+  const constraints={
+    audio:{echoCancellation:true,noiseSuppression:true,sampleRate:48000},
+    video:isVid?{facingMode:{ideal:_callFacingMode},width:{ideal:1280},height:{ideal:720}}:false
+  };
+  try{
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  }catch(e){
+    if(isVid&&(e.name==='OverconstrainedError'||e.name==='NotReadableError')){
+      try{ return await navigator.mediaDevices.getUserMedia({video:true,audio:true}); }catch(e2){}
+    }
+    const msg=e.name==='NotAllowedError'
+      ?'Permission denied — please allow camera/microphone access in your browser and try again.'
+      :e.message;
+    throw new Error(msg);
+  }
+}
+
+async function startCall(type='video'){
+  if(!friendId||!peer)return;
+  isVideoCall=(type==='video');
+  isMicOn=true;isCamOn=isVideoCall;
+  _callFacingMode='user';
+  let stream;
+  try{
+    stream=await _getCallStream(type);
+  }catch(e){
+    toast(e.message||'Camera/mic error');
+    return;
+  }
+  const{data}=await sb.from('users').select('peer_id,username').eq('id',friendId).single();
+  if(!data?.peer_id){
+    stream.getTracks().forEach(t=>t.stop());
+    return toast('Friend is not online right now');
+  }
+  localStream=stream;
+  document.getElementById('localVideo').srcObject=stream;
+  document.getElementById('pipLocalThumb').srcObject=stream;
+  setCallUI(data.username,type);
+  openModal();
+  const call=peer.call(data.peer_id,stream,{metadata:{type}});
+  call.on('stream',rs=>{
+    document.getElementById('remoteVideo').srcObject=rs;
+    document.getElementById('pipRemoteThumb').srcObject=rs;
+    document.getElementById('callStatus').textContent='Connected ✓';
+    startCallTimer();
+  });
+  call.on('close',()=>endCall(true));
+  currentCall=call;
+}
+
+/* ── ACCEPT INCOMING ── */
+document.getElementById('acceptBtn').onclick=async()=>{
+  document.getElementById('incomingBar').classList.remove('show');
+  if(!incomingCall)return;
+  const call=incomingCall;incomingCall=null;
+  const type=call.metadata?.type||'video';
+  isVideoCall=(type!=='audio');
+  isMicOn=true;isCamOn=isVideoCall;
+  setCallUI(call.peer.replace('ch_',''),type);
+  openModal();
+
+  let _setupDone=false;
+  let silentCtx=null;
+  try{
+    silentCtx=new AudioContext();
+    const dest=silentCtx.createMediaStreamDestination();
+    call.answer(new MediaStream([dest.stream.getAudioTracks()[0]]));
+  }catch(e){
+    try{call.answer(new MediaStream());}catch(_){}
+  }
+
+  call.on('stream',rs=>{
+    document.getElementById('remoteVideo').srcObject=rs;
+    document.getElementById('pipRemoteThumb').srcObject=rs;
+    document.getElementById('callStatus').textContent='Connected ✓';
+    startCallTimer();
+  });
+  call.on('close',()=>{ if(_setupDone)endCall(true); });
+  currentCall=call;
+
+  try{
+    const stream=await _getCallStream(type);
+    localStream=stream;
+    document.getElementById('localVideo').srcObject=stream;
+    document.getElementById('pipLocalThumb').srcObject=stream;
+    const pc=call.peerConnection;
+    if(pc){
+      for(const track of stream.getTracks()){
+        const sender=pc.getSenders().find(s=>s.track&&s.track.kind===track.kind);
+        if(sender){await sender.replaceTrack(track);}
+        else{pc.addTrack(track,stream);}
+      }
+    }
+    if(silentCtx)silentCtx.close();
+    _setupDone=true;
+    call.on('close',()=>endCall(true));
+  }catch(e){
+    _setupDone=true;
+    hideModal();
+    toast(e.message||'Camera/mic error');
+  }
+};
+document.getElementById('declineBtn').onclick=()=>{
+  document.getElementById('incomingBar').classList.remove('show');
+  if(incomingCall){incomingCall.close();incomingCall=null;}
+};
+
+function setCallUI(name,type){
+  isVideoCall=(type!=='audio');
+  document.getElementById('callWithLabel').textContent=name;
+  document.getElementById('pipName').textContent=name;
+  document.getElementById('callTypeDisplay').textContent=isVideoCall?'📹 Video Call':'📞 Audio Call';
+  document.getElementById('callAvatarBig').textContent=name[0].toUpperCase();
+  document.getElementById('callAvatarName').textContent=name;
+  document.getElementById('callStatus').textContent='Connecting…';
+  const aoo=document.getElementById('audioOnlyOverlay');
+  aoo.style.display=isVideoCall?'none':'flex';
+  document.getElementById('micBtn').className='ctrl-btn on';
+  document.getElementById('micIcon').className='fas fa-microphone';
+  document.getElementById('camBtn').className='ctrl-btn '+(isVideoCall?'on':'off');
+  document.getElementById('camIcon').className=isVideoCall?'fas fa-video':'fas fa-video-slash';
+  document.getElementById('localVideo').classList.remove('cam-off');
+  const isTouchDev=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  const fb=document.getElementById('flipBtn');
+  if(fb)fb.style.display=(isVideoCall&&isTouchDev)?'flex':'none';
+}
+
+/* ── CALL TIMER ── */
+function startCallTimer(){
+  callStartTime=Date.now();
+  clearInterval(callTimerInterval);
+  callTimerInterval=setInterval(()=>{
+    const sec=Math.floor((Date.now()-callStartTime)/1000);
+    const fmt=fmtCallTimer(sec);
+    document.getElementById('callTimerDisplay').textContent=fmt;
+    document.getElementById('pipTimer').textContent=fmt;
+  },1000);
+}
+
+/* ── END CALL ── */
+async function endCall(fromRemote=false){
+  const sec=callStartTime?Math.floor((Date.now()-callStartTime)/1000):0;
+  clearInterval(callTimerInterval);callStartTime=null;
+  if(currentCall&&!fromRemote)currentCall.close();
+  currentCall=null;
+  if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
+  document.getElementById('localVideo').srcObject=null;
+  document.getElementById('remoteVideo').srcObject=null;
+  document.getElementById('pipRemoteThumb').srcObject=null;
+  document.getElementById('pipLocalThumb').srcObject=null;
+  if(_isRecording)_stopRecording();
+  hideModal();hidePip();
+
+  if(friendId&&me&&sec>0){
+    const label=isVideoCall?'📹 Video call':'📞 Audio call';
+    const content=`${label} ended · ${fmtDuration(sec)}`;
+    await sb.from('messages').insert([{
+      sender_id:me.id,receiver_id:friendId,
+      sender_name:me.username,content,type:'system'
+    }]);
+    await loadMessages();
+  }
+}
+window.endCall=endCall;
+
+/* ── CALL RECORDING ── */
+let _mediaRecorder=null,_recChunks=[],_isRecording=false,_recCanvas=null,_recCtx=null,_recAudioCtx=null;
+
+async function toggleRecording(){
+  if(_isRecording){_stopRecording();}else{await _startRecording();}
+}
+
+async function _startRecording(){
+  try{
+    const remoteVid=document.getElementById('remoteVideo');
+    const localVid=document.getElementById('localVideo');
+    const mimeType=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+      .find(m=>MediaRecorder.isTypeSupported(m))||'';
+    _recCanvas=document.createElement('canvas');
+    _recCanvas.width=1280;_recCanvas.height=720;
+    _recCtx=_recCanvas.getContext('2d');
+    _recAudioCtx=new AudioContext();
+    const dest=_recAudioCtx.createMediaStreamDestination();
+    if(localStream){const src=_recAudioCtx.createMediaStreamSource(localStream);src.connect(dest);}
+    if(document.getElementById('remoteVideo').srcObject){
+      try{const remoteSrc=_recAudioCtx.createMediaStreamSource(document.getElementById('remoteVideo').srcObject);remoteSrc.connect(dest);}catch(e){}
+    }
+    const canvasStream=_recCanvas.captureStream(25);
+    const combined=new MediaStream([...canvasStream.getVideoTracks(),...dest.stream.getAudioTracks()]);
+    const drawLoop=()=>{
+      if(!_isRecording)return;
+      _recCtx.fillStyle='#000';_recCtx.fillRect(0,0,_recCanvas.width,_recCanvas.height);
+      if(remoteVid.readyState>=2)_recCtx.drawImage(remoteVid,0,0,_recCanvas.width,_recCanvas.height);
+      if(localVid.readyState>=2&&isCamOn){
+        const pw=220,ph=165,px=_recCanvas.width-pw-12,py=_recCanvas.height-ph-12;
+        _recCtx.drawImage(localVid,px,py,pw,ph);
+        _recCtx.strokeStyle='#FFFC00';_recCtx.lineWidth=3;_recCtx.strokeRect(px,py,pw,ph);
+      }
+      _recCtx.fillStyle='rgba(255,255,0,0.7)';_recCtx.font='bold 13px monospace';
+      _recCtx.fillText('● REC  '+new Date().toLocaleTimeString(),10,_recCanvas.height-10);
+      requestAnimationFrame(drawLoop);
+    };
+    _recChunks=[];
+    _mediaRecorder=new MediaRecorder(combined,mimeType?{mimeType}:{});
+    _mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)_recChunks.push(e.data);};
+    _mediaRecorder.onstop=_finishRecording;
+    _mediaRecorder.start(500);
+    _isRecording=true;
+    drawLoop();
+    document.getElementById('recBtn').classList.add('recording');
+    document.getElementById('recIcon').className='fas fa-stop';
+    const ri=document.getElementById('recIndicator');if(ri)ri.style.display='inline';
+  }catch(err){
+    toast('Recording error: '+err.message);console.error(err);
+  }
+}
+
+function _stopRecording(){
+  if(_mediaRecorder&&_mediaRecorder.state!=='inactive')_mediaRecorder.stop();
+  _isRecording=false;
+  if(_recAudioCtx){try{_recAudioCtx.close();}catch(e){}_recAudioCtx=null;}
+  document.getElementById('recBtn').classList.remove('recording');
+  document.getElementById('recIcon').className='fas fa-circle';
+  const ri=document.getElementById('recIndicator');if(ri)ri.style.display='none';
+}
+
+function _finishRecording(){
+  if(!_recChunks.length)return;
+  const mimeType=_mediaRecorder?.mimeType||'video/webm';
+  const blob=new Blob(_recChunks,{type:mimeType});
+  const url=URL.createObjectURL(blob);
+  const ext=mimeType.includes('mp4')?'mp4':'webm';
+  const fname='connecthub-call-'+Date.now()+'.'+ext;
+  const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+  _showRecordingReplay(url,fname);
+  _recChunks=[];
+}
+
+function _showRecordingReplay(url,fname){
+  const old=document.getElementById('recReplayOverlay');if(old)old.remove();
+  const overlay=document.createElement('div');
+  overlay.id='recReplayOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:19000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:1rem;';
+  overlay.innerHTML=`
+    <p style="font-weight:700;font-size:1rem;color:#FFFC00;">📹 Recording saved</p>
+    <video src="${url}" controls playsinline style="width:100%;max-width:640px;max-height:55vh;border-radius:1rem;background:#000;border:2px solid rgba(255,252,0,0.3);"></video>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;">
+      <a href="${url}" download="${fname}" style="background:linear-gradient(135deg,#FFFC00,#FFD700);color:#000;font-weight:700;border-radius:.75rem;padding:.65rem 1.4rem;text-decoration:none;font-size:.9rem;">⬇ Save to device</a>
+      <button onclick="document.getElementById('recReplayOverlay').remove()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:.75rem;padding:.65rem 1.4rem;cursor:pointer;font-weight:600;font-size:.9rem;">✕ Close</button>
+    </div>
+    <p style="font-size:.72rem;color:rgba(255,255,255,0.35);">${fname}</p>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{overlay.remove();URL.revokeObjectURL(url);},300000);
+}
+
+document.getElementById('pipEndBtn').onclick=()=>endCall(false);
+document.getElementById('pipExpandBtn').onclick=()=>{hidePip();openModal();};
+
+/* ── MODAL / PiP ── */
+function openModal(){
+  document.getElementById('videoModal').style.display='flex';
+  hidePip();
+}
+function hideModal(){
+  document.getElementById('videoModal').style.display='none';
+  document.getElementById('callTimerDisplay').textContent='0:00';
+  document.getElementById('callStatus').textContent='Connecting…';
+}
+function showPip(){
+  document.getElementById('pipOverlay').classList.add('show');
+}
+function hidePip(){
+  document.getElementById('pipOverlay').classList.remove('show');
+}
+
+/*
+ * FIX: minimiseToPip — improved for APK/PWA context
+ * On Android WebView (TWA/APK), document.pictureInPictureEnabled is often
+ * false even on supported devices. We try native PiP first, then fall back
+ * to our custom overlay PiP so the call stays visible while using other apps.
+ */
+function minimiseToPip(){
+  const remoteVid=document.getElementById('remoteVideo');
+
+  // Try native Android PiP (works in TWA/WebView on Android 8+)
+  if(document.pictureInPictureEnabled && remoteVid.readyState>=2 && !document.pictureInPictureElement){
+    remoteVid.requestPictureInPicture()
+      .then(()=>{ hideModal(); })
+      .catch(()=>{ _showCustomPip(); });
+  } else if(document.pictureInPictureElement){
+    // Already in PiP — return to full screen
+    document.exitPictureInPicture().then(()=>openModal()).catch(()=>openModal());
+  } else {
+    _showCustomPip();
+  }
+}
+
+function _showCustomPip(){
+  // Custom overlay PiP — keeps call visible over the app UI
+  hideModal();
+  if(currentCall) showPip();
+}
+
+/* ── PiP DRAG ── */
+const pip=document.getElementById('pipOverlay');
+pip.addEventListener('mousedown',e=>{
+  if(e.target.closest('button'))return;
+  pipDragging=true;
+  const r=pip.getBoundingClientRect();
+  pipDragOffX=e.clientX-r.left;pipDragOffY=e.clientY-r.top;
+  pip.style.cursor='grabbing';
+});
+pip.addEventListener('touchstart',e=>{
+  if(e.target.closest('button'))return;
+  pipDragging=true;
+  const r=pip.getBoundingClientRect();
+  pipDragOffX=e.touches[0].clientX-r.left;pipDragOffY=e.touches[0].clientY-r.top;
+},{passive:true});
+document.addEventListener('mousemove',e=>{
+  if(!pipDragging)return;
+  let x=e.clientX-pipDragOffX,y=e.clientY-pipDragOffY;
+  x=Math.max(0,Math.min(window.innerWidth-pip.offsetWidth,x));
+  y=Math.max(0,Math.min(window.innerHeight-pip.offsetHeight,y));
+  pip.style.right='auto';pip.style.bottom='auto';
+  pip.style.left=x+'px';pip.style.top=y+'px';
+});
+document.addEventListener('touchmove',e=>{
+  if(!pipDragging)return;
+  let x=e.touches[0].clientX-pipDragOffX,y=e.touches[0].clientY-pipDragOffY;
+  x=Math.max(0,Math.min(window.innerWidth-pip.offsetWidth,x));
+  y=Math.max(0,Math.min(window.innerHeight-pip.offsetHeight,y));
+  pip.style.right='auto';pip.style.bottom='auto';
+  pip.style.left=x+'px';pip.style.top=y+'px';
+},{passive:true});
+document.addEventListener('mouseup',()=>{pipDragging=false;pip.style.cursor='grab';});
+document.addEventListener('touchend',()=>{pipDragging=false;});
+
+/*
+ * FIX: visibilitychange — when app goes to background in APK/PWA,
+ * use custom PiP overlay (native PiP requires user gesture, can't be
+ * auto-triggered on Android WebView). The overlay stays on top of the
+ * WebView chrome, allowing the call audio to continue while the user
+ * navigates elsewhere within the app.
+ */
+document.addEventListener('visibilitychange',()=>{
+  if(!currentCall)return;
+  if(document.hidden){
+    const remoteVid=document.getElementById('remoteVideo');
+    // Try native PiP — works on some browsers/devices
+    if(document.pictureInPictureEnabled && remoteVid.readyState>=2 && !document.pictureInPictureElement){
+      remoteVid.requestPictureInPicture().catch(()=>{
+        hideModal();showPip();
+      });
+    }else{
+      hideModal();showPip();
+    }
+  }else{
+    // Returning to app
+    if(document.pictureInPictureElement){
+      document.exitPictureInPicture().catch(()=>{});
+    }
+    hidePip();openModal();
+  }
+});
+
+// When native PiP closed by user → restore full modal
+document.getElementById('remoteVideo').addEventListener('leavepictureinpicture',()=>{
+  if(currentCall){hidePip();openModal();}
+});
+
+/* ── FRIEND REQUESTS ── */
+document.getElementById('sendReqBtn').onclick=async()=>{
+  const input = document.getElementById('addFriendInput');
+  const target = input.value.trim();
+  if(!target) return toast('Enter a username', false, 'addMsg');
+  if(!me) return toast('Not logged in', false, 'addMsg');
+  if(target === me.username) return toast("That's you!", false, 'addMsg');
+  const btn = document.getElementById('sendReqBtn');
+  btn.disabled = true; btn.textContent = '...';
+  try{
+    const{data:users,error:ue}=await sb.from('users').select('id,username').eq('username',target);
+    if(ue) return toast('DB error: '+ue.message, false, 'addMsg');
+    if(!users||!users.length) return toast('User not found — check the exact username', false, 'addMsg');
+    const tu=users[0];
+    const{data:ex}=await sb.from('friend_requests').select('id,status')
+      .or(`and(from_id.eq.${me.id},to_id.eq.${tu.id}),and(from_id.eq.${tu.id},to_id.eq.${me.id})`);
+    if(ex&&ex.length){
+      const s=ex[0].status;
+      return toast(s==='accepted'?'Already friends!':'Request already pending', false, 'addMsg');
+    }
+    const{error}=await sb.from('friend_requests').insert([{from_id:me.id,to_id:tu.id,status:'pending'}]);
+    if(error) return toast('Error: '+error.message, false, 'addMsg');
+    toast('Request sent to '+target+'!', true, 'addMsg');
+    input.value='';
+  }catch(e){
+    toast('Error: '+e.message, false, 'addMsg');
+  }finally{
+    btn.disabled=false; btn.textContent='Add';
+  }
+};
+
+async function loadRequests(){
+  const{data}=await sb.from('friend_requests')
+    .select('id,from_id,users!friend_requests_from_id_fkey(username)')
+    .eq('to_id',me.id).eq('status','pending');
+  const list=document.getElementById('requestsList');
+  const badge=document.getElementById('reqBadge');
+  if(!data||!data.length){
+    list.innerHTML='<p style="color:#aaa;font-size:.82rem;">No pending requests</p>';
+    badge.style.display='none';return;
+  }
+  badge.style.display='inline';badge.textContent=data.length;
+  list.innerHTML=data.map(r=>`
+    <div class="req-item">
+      <span style="font-size:.85rem;font-weight:600;">👤 ${esc(r.users.username)}</span>
+      <div style="display:flex;gap:.4rem;">
+        <button onclick="acceptReq(${r.id},${r.from_id})" class="btn-green" style="padding:3px 12px;border-radius:999px;font-size:.75rem;font-weight:700;">Accept</button>
+        <button onclick="declineReq(${r.id})" class="btn-red" style="padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:700;">✕</button>
+      </div>
+    </div>
+  `).join('');
+  loadAllFriends();
+}
+window.acceptReq=async(reqId,fromId)=>{
+  await sb.from('friend_requests').update({status:'accepted'}).eq('id',reqId);
+  await sb.from('friends').upsert([{user_id:me.id,friend_id:fromId},{user_id:fromId,friend_id:me.id}],{onConflict:'user_id,friend_id'});
+  await loadRequests();await loadFriendsList();await loadAllFriends();
+};
+window.declineReq=async(reqId)=>{
+  await sb.from('friend_requests').update({status:'declined'}).eq('id',reqId);
+  await loadRequests();
+};
+async function loadAllFriends(){
+  const{data}=await sb.from('friends').select('friend_id,users!friends_friend_id_fkey(username,snap_score)').eq('user_id',me.id);
+  const c=document.getElementById('allFriendsList');
+  if(!data||!data.length){c.innerHTML='<p style="color:#aaa;font-size:.82rem;">No friends yet</p>';return;}
+  c.innerHTML=data.map(f=>`
+    <div style="background:#f5f5f5;border-radius:.85rem;padding:.85rem;text-align:center;border:1px solid #e5e5e5;">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;margin:0 auto .4rem;">${esc(f.users.username[0].toUpperCase())}</div>
+      <p style="font-weight:600;font-size:.82rem;">${esc(f.users.username)}</p>
+      <span class="score-badge">👻 ${f.users.snap_score||0}</span>
+    </div>
+  `).join('');
+}
+
+/* ── FRIENDS SIDEBAR ── */
+async function loadFriendsList(){
+  const{data}=await sb.from('friends').select('friend_id,users!friends_friend_id_fkey(username,snap_score)').eq('user_id',me.id);
+  const el=document.getElementById('friendsList');
+  if(!data||!data.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet</p>';buildStoryRow();return;}
+  el.innerHTML=data.map(f=>`
+    <div class="friend-row ${friendId===f.friend_id?'selected':''}" onclick="selectFriend(${f.friend_id},'${esc(f.users.username)}',${f.users.snap_score||0})">
+      <div class="friend-avatar">${esc(f.users.username[0].toUpperCase())}</div>
+      <div class="friend-info">
+        <div class="friend-name">${esc(f.users.username)}</div>
+        <div class="friend-sub"><i class="fas fa-camera snap-icon"></i><span>Tap to chat</span><span class="streak">🔥 ${f.users.snap_score||0}</span></div>
+      </div>
+      <div class="friend-meta"><i class="fas fa-camera snap-cam-icon"></i></div>
+    </div>
+  `).join('');
+  buildStoryRow();
+}
+window.selectFriend=function(fId,fName,fScore){
+  friendId=fId;friendName=fName;
+  document.getElementById('chatWithName').textContent=fName;
+  document.getElementById('chatHeaderAvatar').textContent=fName[0].toUpperCase();
+  document.getElementById('chatFriendScore').textContent='👻 '+fScore+' snaps';
+  document.getElementById('callFriendBtn').style.display='flex';
+  document.getElementById('audioCallBtn').style.display='flex';
+  document.getElementById('callMoreBtn').style.display='flex';
+  document.getElementById('chatHeaderBar').style.display='flex';
+  document.getElementById('chatEmptyState').style.display='none';
+  document.getElementById('chatMessages').style.display='flex';
+  document.getElementById('chatInputBar').style.display='flex';
+  document.getElementById('groupMessages').style.display='none';
+  document.getElementById('groupInputBar').style.display='none';
+  document.querySelectorAll('.friend-row').forEach(r=>{
+    r.classList.toggle('selected',r.getAttribute('onclick')&&r.getAttribute('onclick').includes('selectFriend('+fId+','));
+    if(r.getAttribute('onclick')&&r.getAttribute('onclick').includes('selectFriend('+fId+',')){
+      const dot=r.querySelector('.unread-dot');if(dot)dot.remove();
+    }
+  });
+  closeFriendsPanel();
+  loadMessages();
+};
+
+/* ── MESSAGES ── */
+async function loadMessages(){
+  if(!friendId||!me)return;
+  const{data,error}=await sb.from('messages')
+    .select('*')
+    .or(`and(sender_id.eq.${me.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${me.id})`)
+    .order('created_at',{ascending:true});
+  if(error){console.error(error);return;}
+  const c=document.getElementById('chatMessages');
+  if(!data||!data.length){
+    c.innerHTML='<p style="text-align:center;color:#bbb;font-size:.85rem;margin:auto;">No messages yet. Say hi! 👋</p>';
+    return;
+  }
+  c.innerHTML=data.map(m=>{
+    if(m.type==='system'){return `<div class="bubble system">${esc(m.content)}</div>`;}
+    const mine=m.sender_id===me.id;
+    const wrapCls='bubble-wrap '+(mine?'mine':'theirs');
+    const bc='bubble '+(mine?'mine':'theirs');
+    const delBtn=mine?`<button class="del-btn" title="Delete" onclick="deleteMsg(${m.id})">✕</button>`:'';
+    if(m.type==='snap'){
+      return `<div class="${wrapCls}">
+        ${delBtn}
+        <p style="font-size:.7rem;color:#aaa;margin-bottom:2px;">${mine?'You sent a snap 📸':'📸 Snap'}</p>
+        <img src="${esc(m.content)}" class="snap-img">
+        <span class="bubble-time">${fmtTime(m.created_at)}</span>
+      </div>`;
+    }
+    return `<div class="${wrapCls}">
+      ${delBtn}
+      <div class="${bc}">${esc(m.content)}</div>
+      <span class="bubble-time">${fmtTime(m.created_at)}</span>
+    </div>`;
+  }).join('');
+  c.scrollTop=c.scrollHeight;
+}
+
+async function sendMsg(){
+  const val=document.getElementById('msgInput').value.trim();
+  if(!val||!friendId||!me)return;
+  document.getElementById('msgInput').value='';
+  const{error}=await sb.from('messages').insert([{
+    sender_id:me.id,receiver_id:friendId,
+    sender_name:me.username,content:val,type:'text'
+  }]);
+  if(error){console.error(error);return;}
+  await loadMessages();
+}
+
+window.deleteMsg=async(msgId)=>{
+  await sb.from('messages').delete().eq('id',msgId).eq('sender_id',me.id);
+  await loadMessages();
+};
+
+/* ── GALLERY SEND ── */
+document.getElementById('galleryInput').onchange=async(e)=>{
+  const file=e.target.files[0];
+  if(!file||!friendId||!me){e.target.value='';return;}
+  e.target.value='';
+  const reader=new FileReader();
+  reader.onload=async(ev)=>{
+    const{error}=await sb.from('messages').insert([{
+      sender_id:me.id,receiver_id:friendId,
+      sender_name:me.username,content:ev.target.result,type:'snap'
+    }]);
+    if(error){console.error(error);return;}
+    await addScore(1);
+    await loadMessages();
+  };
+  reader.readAsDataURL(file);
+};
+
+/* ── SNAP CAMERA ── */
+let _snapStream=null,_snapFacingMode='user',_snapDataUrl=null;
+
+async function openSnapCamera(){
+  if(!friendId){toast('Select a friend first');return;}
+  document.getElementById('snapModal').style.display='flex';
+  await _startSnapStream();
+}
+
+async function _startSnapStream(){
+  try{
+    const newStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:_snapFacingMode,width:{ideal:1280},height:{ideal:720}},audio:false
+    });
+    if(_snapStream){_snapStream.getTracks().forEach(t=>t.stop());}
+    _snapStream=newStream;
+    const vf=document.getElementById('snapViewfinder');
+    vf.srcObject=_snapStream;
+    vf.style.transform=_snapFacingMode==='user'?'scaleX(-1)':'none';
+    vf.style.display='block';
+    document.getElementById('snapCanvas').style.display='none';
+    document.getElementById('snapLiveControls').style.display='flex';
+    document.getElementById('snapPreviewControls').style.display='none';
+    _snapDataUrl=null;
+  }catch(err){
+    toast('Camera error: '+err.message);
+    closeSnapCamera();
+  }
+}
+
+function closeSnapCamera(){
+  if(_snapStream){_snapStream.getTracks().forEach(t=>t.stop());_snapStream=null;}
+  document.getElementById('snapModal').style.display='none';
+  _snapDataUrl=null;
+}
+
+async function flipCamera(){
+  _snapFacingMode=_snapFacingMode==='user'?'environment':'user';
+  await _startSnapStream();
+}
+
+async function takeSnap(){
+  const vf=document.getElementById('snapViewfinder');
+  const canvas=document.getElementById('snapCanvas');
+  const flash=document.getElementById('snapFlash');
+  flash.style.display='block';flash.style.opacity='0.85';flash.style.transition='opacity 0.3s';
+  setTimeout(()=>{flash.style.opacity='0';setTimeout(()=>{flash.style.display='none';},320);},60);
+  canvas.width=vf.videoWidth||640;canvas.height=vf.videoHeight||480;
+  const ctx=canvas.getContext('2d');
+  if(_snapFacingMode==='user'){ctx.translate(canvas.width,0);ctx.scale(-1,1);}
+  ctx.drawImage(vf,0,0,canvas.width,canvas.height);
+  _snapDataUrl=canvas.toDataURL('image/jpeg',0.88);
+  vf.style.display='none';canvas.style.display='block';
+  document.getElementById('snapLiveControls').style.display='none';
+  document.getElementById('snapPreviewControls').style.display='flex';
+  if(_snapStream){_snapStream.getTracks().forEach(t=>t.stop());_snapStream=null;}
+}
+
+async function retakeSnap(){await _startSnapStream();}
+
+async function sendSnapFromCamera(){
+  if(!_snapDataUrl||!friendId||!me)return;
+  const dataUrl=_snapDataUrl;
+  closeSnapCamera();
+  const{error}=await sb.from('messages').insert([{
+    sender_id:me.id,receiver_id:friendId,
+    sender_name:me.username,content:dataUrl,type:'snap'
+  }]);
+  if(error){console.error(error);return;}
+  await addScore(1);
+  await loadMessages();
+}
+
+async function addScore(n=1){
+  const ns=(me.snap_score||0)+n;
+  await sb.from('users').update({snap_score:ns}).eq('id',me.id);
+  me.snap_score=ns;
+  document.getElementById('headerScore').textContent=ns;
+  document.getElementById('headerScoreDesktop').textContent=ns;
+}
+
+document.getElementById('sendMsgBtn').onclick=sendMsg;
+document.getElementById('msgInput').addEventListener('keypress',e=>{if(e.key==='Enter')sendMsg();});
+
+/* ── GROUPS ── */
+async function loadGroups(){
+  const{data}=await sb.from('groups').select('*');
+  const sel=document.getElementById('groupSelect');
+  sel.innerHTML='<option value="">— Pick a group —</option>';
+  if(data)data.forEach(g=>{sel.innerHTML+=`<option value="${g.id}">${esc(g.name)}</option>`;});
+}
+document.getElementById('createGroupBtn').onclick=async()=>{
+  const name=document.getElementById('newGroupName').value.trim();
+  if(!name)return;
+  const{data,error}=await sb.from('groups').insert([{name,created_by:me.id}]).select();
+  if(error||!data)return;
+  await sb.from('group_members').insert([{group_id:data[0].id,user_id:me.id}]);
+  document.getElementById('newGroupName').value='';
+  await loadGroups();
+};
+document.getElementById('joinGroupBtn').onclick=async()=>{
+  const gid=parseInt(document.getElementById('groupSelect').value);
+  if(!gid)return;
+  await sb.from('group_members').upsert([{group_id:gid,user_id:me.id}]);
+  groupId=gid;
+  const{data:g}=await sb.from('groups').select('name').eq('id',gid).single();
+  document.getElementById('activeGroupName').textContent=g?.name||'Group';
+  showGroupChat();
+  await loadGroupMessages();
+};
+async function loadGroupMessages(){
+  if(!groupId)return;
+  const{data}=await sb.from('group_messages')
+    .select('*,users!group_messages_sender_id_fkey(username)')
+    .eq('group_id',groupId).order('created_at',{ascending:true});
+  const c=document.getElementById('groupMessages');
+  if(!data||!data.length){c.innerHTML='<p style="color:#bbb;font-size:.82rem;text-align:center;">No messages yet</p>';return;}
+  c.innerHTML=data.map(m=>{
+    const mine=m.sender_id===me.id;
+    const wrapCls='bubble-wrap '+(mine?'mine':'theirs');
+    const bc='bubble '+(mine?'mine':'theirs');
+    return `<div class="${wrapCls}">
+      ${!mine?`<span style="font-size:.7rem;color:#aaa;margin-bottom:2px;">${esc(m.users?.username)}</span>`:''}
+      <div class="${bc}">${esc(m.content)}</div>
+      <span class="bubble-time">${fmtTime(m.created_at)}</span>
+    </div>`;
+  }).join('');
+  c.scrollTop=c.scrollHeight;
+}
+document.getElementById('sendGroupMsgBtn').onclick=async()=>{
+  const content=document.getElementById('groupMsgInput').value.trim();
+  if(!content||!groupId)return;
+  await sb.from('group_messages').insert([{group_id:groupId,sender_id:me.id,content}]);
+  document.getElementById('groupMsgInput').value='';
+  await loadGroupMessages();
+};
+document.getElementById('groupMsgInput').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('sendGroupMsgBtn').click();});
+
+/* ── SHOW GROUP CHAT ── */
+function showGroupChat(){
+  document.getElementById('chatHeaderBar').style.display='none';
+  document.getElementById('chatEmptyState').style.display='none';
+  document.getElementById('chatMessages').style.display='none';
+  document.getElementById('chatInputBar').style.display='none';
+  const gm=document.getElementById('groupMessages');
+  gm.style.display='flex';gm.style.flexDirection='column';
+  document.getElementById('groupInputBar').style.display='flex';
+  closeFriendsPanel();
+}
+
+/* ── STORY ROW ── */
+async function buildStoryRow(){
+  const row=document.getElementById('storyRow');
+  if(!row)return;
+  const{data}=await sb.from('friends').select('friend_id,users!friends_friend_id_fkey(username)').eq('user_id',me.id);
+  row.innerHTML='';
+  if(!data||!data.length){row.style.display='none';return;}
+  row.style.display='flex';
+  data.slice(0,8).forEach(f=>{
+    const name=f.users?.username||'?';
+    const bubble=document.createElement('div');
+    bubble.className='story-bubble';
+    bubble.innerHTML=`<div class="story-ring"><div class="story-ring-inner">${name[0].toUpperCase()}</div></div><span class="story-name">${name}</span>`;
+    bubble.onclick=()=>{
+      document.querySelectorAll('.friend-row').forEach(r=>{
+        if((r.getAttribute('onclick')||'').includes("selectFriend("+f.friend_id+",")){r.click();}
+      });
+    };
+    row.appendChild(bubble);
+  });
+}
+
+/* ── POLLING ── */
+function startPolling(){
+  setInterval(async()=>{
+    if(!me)return;
+    if(friendId)await loadMessages();
+    if(groupId)await loadGroupMessages();
+    const{data}=await sb.from('users').select('snap_score').eq('id',me.id).single();
+    if(data){me.snap_score=data.snap_score||0;document.getElementById('headerScore').textContent=me.snap_score;document.getElementById('headerScoreDesktop').textContent=me.snap_score;}
+    const{data:reqs}=await sb.from('friend_requests').select('id').eq('to_id',me.id).eq('status','pending');
+    const badge=document.getElementById('reqBadge');
+    if(reqs&&reqs.length){badge.style.display='inline';badge.textContent=reqs.length;
+      const nb=document.getElementById('navReqBadge');if(nb){nb.style.display='inline';nb.textContent=reqs.length;}}
+    else{badge.style.display='none';const nb=document.getElementById('navReqBadge');if(nb)nb.style.display='none';}
+    await loadFriendsList();
+    const{data:frList}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
+    if(frList){
+      for(const f of frList){
+        if(f.friend_id===friendId)continue;
+        const{data:msgs}=await sb.from('messages').select('id').eq('sender_id',f.friend_id).eq('receiver_id',me.id);
+        const count=msgs?msgs.length:0;
+        const prev=_lastMsgCount[f.friend_id]||0;
+        if(count>prev){
+          _lastMsgCount[f.friend_id]=count;
+          document.querySelectorAll('.friend-row').forEach(r=>{
+            const oc=r.getAttribute('onclick')||'';
+            if(oc.includes('selectFriend('+f.friend_id+',')){
+              if(!r.querySelector('.unread-dot')){
+                const dot=document.createElement('span');
+                dot.className='unread-dot';
+                dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#FFFC00;margin-left:auto;flex-shrink:0;';
+                r.appendChild(dot);
+              }
+            }
+          });
+        }
+      }
+    }
+  },3000);
+}
+</script>
+
+<script>
+
+
+/* ── PWA: Install prompt banner ── */
+let _deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  _deferredInstallPrompt=e;
+  setTimeout(()=>{
+    if(!_deferredInstallPrompt)return;
+    if(window.matchMedia('(display-mode: standalone)').matches)return;
+    const banner=document.createElement('div');
+    banner.id='pwaInstallBanner';
+    banner.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1a1a2e,#0f3460);border:1px solid rgba(255,252,0,0.35);color:#fff;padding:10px 18px;border-radius:999px;z-index:99999;display:flex;align-items:center;gap:10px;font-size:.82rem;font-weight:600;box-shadow:0 4px 24px rgba(0,0,0,.6);white-space:nowrap;';
+    banner.innerHTML=`<span>👻 Install ConnectHub as an app</span><button onclick="installPWA()" style="background:linear-gradient(135deg,#FFFC00,#FFD700);color:#000;border:none;border-radius:999px;padding:5px 14px;font-size:.78rem;font-weight:800;cursor:pointer;">Install</button><button onclick="document.getElementById('pwaInstallBanner').remove()" style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1rem;line-height:1;">✕</button>`;
+    document.body.appendChild(banner);
+  },3000);
+});
+function installPWA(){
+  if(!_deferredInstallPrompt)return;
+  _deferredInstallPrompt.prompt();
+  _deferredInstallPrompt.userChoice.then(()=>{
+    _deferredInstallPrompt=null;
+    const b=document.getElementById('pwaInstallBanner');if(b)b.remove();
+  });
+}
+window.installPWA=installPWA;
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.log('SW error:', err));
+    });
+  }
+</script>
+</body>
+</html>
