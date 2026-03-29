@@ -488,6 +488,22 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 
       <!-- Friends panel -->
       <div id="tab-friends-sidebar" class="panel-scroll" style="display:none;">
+        <!-- Profile / Display Name -->
+        <div class="section-card">
+          <h3><i class="fas fa-user-circle" style="margin-right:.35rem;color:#FFFC00;"></i>My Profile</h3>
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem;">
+            <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#FFFC00,#FFD700);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;color:#000;flex-shrink:0;" id="profileAvatarBig">?</div>
+            <div style="flex:1;min-width:0;">
+              <p style="font-weight:700;font-size:.9rem;color:#1a1a1a;" id="profileDisplayName">—</p>
+              <p style="font-size:.72rem;color:#aaa;">Display name</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <input id="displayNameInput" placeholder="New display name…" maxlength="30" style="flex:1;background:#f5f5f5;border:1.5px solid #e5e5e5;border-radius:10px;padding:.45rem .75rem;font-size:.85rem;color:#1a1a1a;outline:none;transition:border .2s;" onfocus="this.style.borderColor='#FFFC00'" onblur="this.style.borderColor='#e5e5e5'">
+            <button class="btn-snap" id="saveDisplayNameBtn" style="padding:.45rem .85rem;border-radius:10px;font-size:.8rem;font-weight:800;white-space:nowrap;flex-shrink:0;">Save</button>
+          </div>
+          <p id="displayNameMsg" style="font-size:.75rem;margin-top:.35rem;min-height:1rem;color:#555;"></p>
+        </div>
         <div class="section-card">
           <h3><i class="fas fa-user-plus" style="margin-right:.35rem;color:#FFFC00;"></i>Add Friend</h3>
           <div style="display:flex;gap:.5rem;align-items:center;">
@@ -670,18 +686,80 @@ document.getElementById('signupBtn').onclick=async()=>{
   }
 };
 
+/* ── UPFRONT PERMISSION REQUEST ── */
+async function _requestMediaPermissions(){
+  // Show a friendly banner asking for permissions
+  const banner=document.createElement('div');
+  banner.id='permBanner';
+  banner.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:999px;z-index:99999;display:flex;align-items:center;gap:12px;font-size:.82rem;font-weight:600;box-shadow:0 4px 24px rgba(0,0,0,.5);white-space:nowrap;border:1px solid rgba(255,252,0,0.3);';
+  banner.innerHTML=`<span>🎤📷 Allow mic & camera for calls</span>
+    <button id="grantPermBtn" style="background:#FFFC00;color:#000;border:none;border-radius:999px;padding:5px 14px;font-size:.78rem;font-weight:800;cursor:pointer;">Allow</button>
+    <button onclick="document.getElementById('permBanner')?.remove()" style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:1rem;">✕</button>`;
+  document.body.appendChild(banner);
+  document.getElementById('grantPermBtn').onclick=async()=>{
+    banner.remove();
+    try{
+      // Request both video and audio — browser caches the grant for future calls
+      const s=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
+      s.getTracks().forEach(t=>t.stop());
+    }catch(e){
+      // If video denied, try audio-only so mic works for audio calls
+      try{
+        const s2=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        s2.getTracks().forEach(t=>t.stop());
+      }catch(_){}
+    }
+  };
+}
+
 async function boot(user){
   me=user;
   document.getElementById('authCard').style.display='none';
   document.getElementById('mainApp').style.display='block';
-  document.getElementById('headerUsername').textContent=me.username;
-  document.getElementById('avatarCircle').textContent=me.username[0].toUpperCase();
+  document.getElementById('headerUsername').textContent=me.display_name||me.username;
+  document.getElementById('avatarCircle').textContent=(me.display_name||me.username)[0].toUpperCase();
   document.getElementById('headerScore').textContent=me.snap_score||0;
   document.getElementById('headerScoreDesktop').textContent=me.snap_score||0;
+  // Profile panel
+  const dn=me.display_name||me.username;
+  const pdEl=document.getElementById('profileDisplayName');if(pdEl)pdEl.textContent=dn;
+  const paEl=document.getElementById('profileAvatarBig');if(paEl)paEl.textContent=dn[0].toUpperCase();
   buildStoryRow();
   initPeer();
   await loadFriendsList();await loadGroups();await loadRequests();
   startPolling();
+  // Request camera + mic permissions upfront so calls work immediately
+  _requestMediaPermissions();
+}
+
+/* ── DISPLAY NAME ── */
+document.getElementById('saveDisplayNameBtn').onclick=async()=>{
+  const inp=document.getElementById('displayNameInput');
+  const val=inp.value.trim();
+  if(!val)return _dnMsg('Enter a display name','#ef4444');
+  if(val.length<2)return _dnMsg('Too short (min 2 chars)','#ef4444');
+  const btn=document.getElementById('saveDisplayNameBtn');
+  btn.disabled=true;btn.textContent='…';
+  try{
+    const{error}=await sb.from('users').update({display_name:val}).eq('id',me.id);
+    if(error){_dnMsg('Error: '+error.message,'#ef4444');return;}
+    me.display_name=val;
+    document.getElementById('profileDisplayName').textContent=val;
+    document.getElementById('profileAvatarBig').textContent=val[0].toUpperCase();
+    document.getElementById('headerUsername').textContent=val;
+    document.getElementById('avatarCircle').textContent=val[0].toUpperCase();
+    inp.value='';
+    _dnMsg('Display name updated ✓','#22c55e');
+  }catch(e){_dnMsg('Error: '+e.message,'#ef4444');}finally{
+    btn.disabled=false;btn.textContent='Save';
+  }
+};
+document.getElementById('displayNameInput').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('saveDisplayNameBtn').click();});
+function _dnMsg(msg,color){
+  const el=document.getElementById('displayNameMsg');
+  if(!el)return;
+  el.textContent=msg;el.style.color=color;
+  setTimeout(()=>{el.textContent='';},3000);
 }
 document.getElementById('logoutBtn').onclick=doLogout;
 if(document.getElementById('logoutBtnMobile'))document.getElementById('logoutBtnMobile').onclick=doLogout;
@@ -771,16 +849,54 @@ function toggleMic(){
   document.getElementById('micBtn').className='ctrl-btn '+(isMicOn?'on':'off');
   document.getElementById('micIcon').className=isMicOn?'fas fa-microphone':'fas fa-microphone-slash';
 }
-function toggleCam(){
+async function toggleCam(){
   isCamOn=!isCamOn;
-  if(localStream)localStream.getVideoTracks().forEach(t=>t.enabled=isCamOn);
   document.getElementById('camBtn').className='ctrl-btn '+(isCamOn?'on':'off');
   document.getElementById('camIcon').className=isCamOn?'fas fa-video':'fas fa-video-slash';
   document.getElementById('localVideo').classList.toggle('cam-off',!isCamOn);
-  if(isCamOn&&!isVideoCall){
-    isVideoCall=true;
-    document.getElementById('audioOnlyOverlay').style.display='none';
-    document.getElementById('callTypeDisplay').textContent='Video Call';
+
+  if(isCamOn){
+    // Turning camera ON — may need to add a video track if this was an audio-only call
+    const existingVideoTracks=localStream?localStream.getVideoTracks():[];
+    if(existingVideoTracks.length>0){
+      // We already have a video track — just re-enable it
+      existingVideoTracks.forEach(t=>t.enabled=true);
+    }else{
+      // Audio call upgrading to video — request a new video track
+      try{
+        const vidStream=await navigator.mediaDevices.getUserMedia({
+          video:{facingMode:{ideal:_callFacingMode},width:{ideal:1280},height:{ideal:720}},
+          audio:false
+        });
+        const newVidTrack=vidStream.getVideoTracks()[0];
+        if(localStream){localStream.addTrack(newVidTrack);}
+        else{localStream=vidStream;}
+        // Add/replace video track in peer connection
+        const pc=currentCall?.peerConnection;
+        if(pc){
+          const sender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
+          if(sender){await sender.replaceTrack(newVidTrack);}
+          else{pc.addTrack(newVidTrack,localStream);}
+        }
+        document.getElementById('localVideo').srcObject=localStream;
+        document.getElementById('pipLocalThumb').srcObject=localStream;
+      }catch(e){
+        isCamOn=false;
+        document.getElementById('camBtn').className='ctrl-btn off';
+        document.getElementById('camIcon').className='fas fa-video-slash';
+        document.getElementById('localVideo').classList.add('cam-off');
+        toast('Could not access camera: '+(e.name==='NotAllowedError'?'Permission denied — allow camera access in your browser.':e.message));
+        return;
+      }
+    }
+    if(!isVideoCall){
+      isVideoCall=true;
+      document.getElementById('audioOnlyOverlay').style.display='none';
+      document.getElementById('callTypeDisplay').textContent='📹 Video Call';
+    }
+  }else{
+    // Turning camera OFF — just disable track
+    if(localStream)localStream.getVideoTracks().forEach(t=>t.enabled=false);
   }
 }
 
@@ -811,44 +927,98 @@ async function flipCallCamera(){
 /* ── SCREEN SHARE ── */
 async function toggleScreenShare(){
   if(_isScreenSharing){
+    // — STOP screen share —
     if(_screenShareStream){_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;}
     _isScreenSharing=false;
+    const pc=currentCall?.peerConnection;
     try{
-      const camStream=await _getCallStream(isVideoCall?'video':'audio');
-      const newVidTrack=camStream.getVideoTracks()[0];
-      if(newVidTrack){
-        const sender=currentCall?.peerConnection?.getSenders().find(s=>s.track&&s.track.kind==='video');
-        if(sender)await sender.replaceTrack(newVidTrack);
+      if(isVideoCall){
+        // Restore camera stream
+        const camStream=await _getCallStream('video');
+        const newVidTrack=camStream.getVideoTracks()[0];
+        const sender=pc?.getSenders().find(s=>s.track&&s.track.kind==='video');
+        if(sender&&newVidTrack){await sender.replaceTrack(newVidTrack);}
+        // Also restore audio track in case it was replaced
+        const newAudTrack=camStream.getAudioTracks()[0];
+        const audSender=pc?.getSenders().find(s=>s.track&&s.track.kind==='audio');
+        if(audSender&&newAudTrack){await audSender.replaceTrack(newAudTrack);}
         localStream=camStream;
-        document.getElementById('localVideo').srcObject=localStream;
-        document.getElementById('pipLocalThumb').srcObject=localStream;
+      }else{
+        // Audio call — just restore mic, remove screen video sender
+        const audioStream=await _getCallStream('audio');
+        const newAudTrack=audioStream.getAudioTracks()[0];
+        const audSender=pc?.getSenders().find(s=>s.track&&s.track.kind==='audio');
+        if(audSender&&newAudTrack){await audSender.replaceTrack(newAudTrack);}
+        // Remove the video sender we added for screen share
+        const vidSender=pc?.getSenders().find(s=>s.track&&s.track.kind==='video');
+        if(vidSender){try{pc.removeTrack(vidSender);}catch(e){}}
+        localStream=audioStream;
       }
-    }catch(e){}
+      document.getElementById('localVideo').srcObject=localStream;
+      // Restore localVideo mirror (camera should be mirrored, not screen)
+      document.getElementById('localVideo').style.transform='scaleX(-1)';
+      document.getElementById('pipLocalThumb').srcObject=localStream;
+      // Restore PiP to show remote video (not screen)
+      const remoteVid=document.getElementById('remoteVideo');
+      document.getElementById('pipRemoteThumb').srcObject=remoteVid.srcObject;
+    }catch(e){console.warn('Screen share restore error:',e);}
     document.getElementById('shareScreenBtn').className='ctrl-btn off';
     document.getElementById('shareScreenIcon').className='fas fa-desktop';
     document.getElementById('callTypeDisplay').textContent=isVideoCall?'📹 Video Call':'📞 Audio Call';
+    document.getElementById('localVideo').classList.toggle('cam-off',!isCamOn);
   }else{
+    // — START screen share —
+    if(!currentCall){toast('Start a call first');return;}
     try{
-      _screenShareStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
-      const screenVidTrack=_screenShareStream.getVideoTracks()[0];
-      const pc=currentCall?.peerConnection;
-      if(pc){
-        const sender=pc.getSenders().find(s=>s.track&&s.track.kind==='video');
-        if(sender){
-          await sender.replaceTrack(screenVidTrack);
-        }else{
-          pc.addTrack(screenVidTrack,_screenShareStream);
+      _screenShareStream=await navigator.mediaDevices.getDisplayMedia({
+        video:{cursor:'always',displaySurface:'monitor'},
+        audio:true
+      });
+    }catch(e){
+      if(e.name!=='NotAllowedError')toast('Could not share screen: '+e.message);
+      return;
+    }
+    const screenVidTrack=_screenShareStream.getVideoTracks()[0];
+    const screenAudTrack=_screenShareStream.getAudioTracks()[0];
+    const pc=currentCall.peerConnection;
+    try{
+      // Replace or add video track
+      const vidSender=pc?.getSenders().find(s=>s.track&&s.track.kind==='video');
+      if(vidSender){
+        await vidSender.replaceTrack(screenVidTrack);
+      }else if(pc){
+        // Audio call — add video track so remote can see the screen
+        pc.addTrack(screenVidTrack,_screenShareStream);
+      }
+      // Optionally also send system audio
+      if(screenAudTrack&&pc){
+        const audSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
+        if(audSender){
+          // Mix system audio: keep mic too by not replacing, or replace if no mic
+          // We'll replace — user can unmute mic separately
         }
       }
-      document.getElementById('localVideo').srcObject=_screenShareStream;
-      _isScreenSharing=true;
-      document.getElementById('shareScreenBtn').className='ctrl-btn on';
-      document.getElementById('shareScreenIcon').className='fas fa-desktop';
-      document.getElementById('callTypeDisplay').textContent='🖥️ Sharing Screen';
-      screenVidTrack.onended=()=>toggleScreenShare();
     }catch(e){
-      if(e.name!=='NotAllowedError')toast('Screen share error: '+e.message);
+      toast('Screen share routing error: '+e.message);
+      _screenShareStream.getTracks().forEach(t=>t.stop());
+      _screenShareStream=null;
+      return;
     }
+    // Show screen in local preview — remove mirror flip (screens shouldn't be mirrored)
+    document.getElementById('localVideo').style.transform='none';
+    document.getElementById('localVideo').srcObject=_screenShareStream;
+    document.getElementById('localVideo').classList.remove('cam-off');
+    // Show screen in PiP remote thumb so it's prominent when you leave the app
+    document.getElementById('pipRemoteThumb').srcObject=_screenShareStream;
+    document.getElementById('pipLocalThumb').srcObject=document.getElementById('remoteVideo').srcObject;
+    _isScreenSharing=true;
+    document.getElementById('shareScreenBtn').className='ctrl-btn on';
+    document.getElementById('shareScreenIcon').className='fas fa-desktop';
+    document.getElementById('callTypeDisplay').textContent='🖥️ Sharing Screen';
+    // Auto-stop when user ends screen share via browser UI
+    screenVidTrack.onended=()=>{
+      if(_isScreenSharing)toggleScreenShare();
+    };
   }
 }
 
@@ -919,15 +1089,23 @@ document.getElementById('acceptBtn').onclick=async()=>{
   setCallUI(call.peer.replace('ch_',''),type);
   openModal();
 
-  let _setupDone=false;
-  let silentCtx=null;
+  // Get real media stream FIRST, then answer — ensures audio+video sent immediately
+  let stream;
   try{
-    silentCtx=new AudioContext();
-    const dest=silentCtx.createMediaStreamDestination();
-    call.answer(new MediaStream([dest.stream.getAudioTracks()[0]]));
+    stream=await _getCallStream(type);
   }catch(e){
+    hideModal();
+    toast(e.message||'Camera/mic error — could not access microphone/camera');
     try{call.answer(new MediaStream());}catch(_){}
+    return;
   }
+
+  localStream=stream;
+  document.getElementById('localVideo').srcObject=stream;
+  document.getElementById('pipLocalThumb').srcObject=stream;
+
+  // Answer with real stream so remote peer receives audio + video from the start
+  call.answer(stream);
 
   call.on('stream',rs=>{
     document.getElementById('remoteVideo').srcObject=rs;
@@ -935,30 +1113,8 @@ document.getElementById('acceptBtn').onclick=async()=>{
     document.getElementById('callStatus').textContent='Connected ✓';
     startCallTimer();
   });
-  call.on('close',()=>{ if(_setupDone)endCall(true); });
+  call.on('close',()=>endCall(true));
   currentCall=call;
-
-  try{
-    const stream=await _getCallStream(type);
-    localStream=stream;
-    document.getElementById('localVideo').srcObject=stream;
-    document.getElementById('pipLocalThumb').srcObject=stream;
-    const pc=call.peerConnection;
-    if(pc){
-      for(const track of stream.getTracks()){
-        const sender=pc.getSenders().find(s=>s.track&&s.track.kind===track.kind);
-        if(sender){await sender.replaceTrack(track);}
-        else{pc.addTrack(track,stream);}
-      }
-    }
-    if(silentCtx)silentCtx.close();
-    _setupDone=true;
-    call.on('close',()=>endCall(true));
-  }catch(e){
-    _setupDone=true;
-    hideModal();
-    toast(e.message||'Camera/mic error');
-  }
 };
 document.getElementById('declineBtn').onclick=()=>{
   document.getElementById('incomingBar').classList.remove('show');
@@ -1003,11 +1159,16 @@ async function endCall(fromRemote=false){
   clearInterval(callTimerInterval);callStartTime=null;
   if(currentCall&&!fromRemote)currentCall.close();
   currentCall=null;
+  if(_screenShareStream){_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;}
+  _isScreenSharing=false;
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   document.getElementById('localVideo').srcObject=null;
+  document.getElementById('localVideo').style.transform='scaleX(-1)'; // restore mirror
   document.getElementById('remoteVideo').srcObject=null;
   document.getElementById('pipRemoteThumb').srcObject=null;
   document.getElementById('pipLocalThumb').srcObject=null;
+  document.getElementById('shareScreenBtn').className='ctrl-btn off';
+  document.getElementById('shareScreenIcon').className='fas fa-desktop';
   if(_isRecording)_stopRecording();
   hideModal();hidePip();
 
@@ -1135,29 +1296,28 @@ function hidePip(){
 }
 
 /*
- * FIX: minimiseToPip — improved for APK/PWA context
- * On Android WebView (TWA/APK), document.pictureInPictureEnabled is often
- * false even on supported devices. We try native PiP first, then fall back
- * to our custom overlay PiP so the call stays visible while using other apps.
+ * minimiseToPip — triggered by user button press (has gesture, so native PiP works).
+ * We always try native PiP first (requires user gesture), then fall back to custom overlay.
  */
 function minimiseToPip(){
   const remoteVid=document.getElementById('remoteVideo');
 
-  // Try native Android PiP (works in TWA/WebView on Android 8+)
-  if(document.pictureInPictureEnabled && remoteVid.readyState>=2 && !document.pictureInPictureElement){
+  if(document.pictureInPictureElement){
+    // Already in native PiP — exit back to full modal
+    document.exitPictureInPicture().then(()=>openModal()).catch(()=>openModal());
+    return;
+  }
+
+  if(document.pictureInPictureEnabled && remoteVid.readyState>=2){
     remoteVid.requestPictureInPicture()
       .then(()=>{ hideModal(); })
       .catch(()=>{ _showCustomPip(); });
-  } else if(document.pictureInPictureElement){
-    // Already in PiP — return to full screen
-    document.exitPictureInPicture().then(()=>openModal()).catch(()=>openModal());
-  } else {
+  }else{
     _showCustomPip();
   }
 }
 
 function _showCustomPip(){
-  // Custom overlay PiP — keeps call visible over the app UI
   hideModal();
   if(currentCall) showPip();
 }
@@ -1197,30 +1357,26 @@ document.addEventListener('mouseup',()=>{pipDragging=false;pip.style.cursor='gra
 document.addEventListener('touchend',()=>{pipDragging=false;});
 
 /*
- * FIX: visibilitychange — when app goes to background in APK/PWA,
- * use custom PiP overlay (native PiP requires user gesture, can't be
- * auto-triggered on Android WebView). The overlay stays on top of the
- * WebView chrome, allowing the call audio to continue while the user
- * navigates elsewhere within the app.
+ * visibilitychange — when the app goes to the background.
+ * Native PiP CANNOT be triggered here (no user gesture), so we always
+ * use the custom PiP overlay which keeps the call UI visible within the
+ * WebView / PWA while the audio continues playing.
  */
 document.addEventListener('visibilitychange',()=>{
   if(!currentCall)return;
   if(document.hidden){
-    const remoteVid=document.getElementById('remoteVideo');
-    // Try native PiP — works on some browsers/devices
-    if(document.pictureInPictureEnabled && remoteVid.readyState>=2 && !document.pictureInPictureElement){
-      remoteVid.requestPictureInPicture().catch(()=>{
-        hideModal();showPip();
-      });
-    }else{
-      hideModal();showPip();
+    // App going to background — use custom PiP (native PiP needs user gesture)
+    if(!document.pictureInPictureElement){
+      hideModal();
+      showPip();
     }
   }else{
-    // Returning to app
+    // App returning to foreground
     if(document.pictureInPictureElement){
       document.exitPictureInPicture().catch(()=>{});
     }
-    hidePip();openModal();
+    hidePip();
+    openModal();
   }
 });
 
