@@ -21,7 +21,7 @@ jobs:
 
       - name: Init Bubblewrap project
         run: |
-          echo -e "n\n" | bubblewrap init \
+          echo -e "n\n$JAVA_HOME\n" | bubblewrap init \
             --manifest https://connecthub40.pages.dev/manifest.json \
             --directory ./twa
         env:
