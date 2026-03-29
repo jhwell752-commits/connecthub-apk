@@ -79,16 +79,6 @@ jobs:
           }
           EOF
 
-          # SHA-1 checksum — exact algorithm bubblewrap uses
-          node -e "
-            const crypto = require('crypto');
-            const fs = require('fs');
-            const manifest = fs.readFileSync('./twa/twa-manifest.json');
-            const hash = crypto.createHash('sha1').update(manifest).digest('hex');
-            fs.writeFileSync('./twa/manifest-checksum.txt', hash);
-            console.log('Checksum written:', hash);
-          "
-
       - name: Generate signing keystore
         run: |
           keytool -genkeypair \
@@ -102,12 +92,18 @@ jobs:
             -dname "CN=ConnectHub Dev, OU=Dev, O=ConnectHub, L=Unknown, ST=Unknown, C=US" \
             -noprompt
 
+      - name: Generate Android project
+        working-directory: ./twa
+        # --skipVersionUpgrade suppresses the "versionName?" interactive prompt
+        run: bubblewrap update --skipVersionUpgrade
+        env:
+          BUBBLEWRAP_DISABLE_TELEMETRY: '1'
+
       - name: Build APK
         working-directory: ./twa
         run: bubblewrap build --skipPwaValidation
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: '1'
-          # Exact env var names from bubblewrap source:
           BUBBLEWRAP_KEYSTORE_PASSWORD: connecthub123
           BUBBLEWRAP_KEY_PASSWORD: connecthub123
 
