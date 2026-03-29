@@ -16,6 +16,9 @@ jobs:
       - name: Install expect
         run: sudo apt-get install -y expect
 
+      - name: Create twa directory
+        run: mkdir -p ./twa
+
       - name: Init Bubblewrap project
         run: |
           cat > /tmp/bubblewrap_init.exp << 'EOF'
@@ -26,7 +29,6 @@ jobs:
             "install the JDK"              { send "y\r"; exp_continue }
             "install the Android SDK"      { send "y\r"; exp_continue }
             "agree to the Android SDK"     { send "y\r"; exp_continue }
-            "create it now"                { send "y\r"; exp_continue }
             "? Domain:"                    { send "connecthub40.pages.dev\r"; exp_continue }
             "? URL path:"                  { send "/\r"; exp_continue }
             "? Application name:"          { send "ConnectHub\r"; exp_continue }
