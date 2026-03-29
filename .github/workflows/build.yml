@@ -74,7 +74,7 @@ jobs:
             "isChromeOSOnly": false,
             "isMetaQuest": false,
             "fullScopeUrl": "https://connecthub40.pages.dev/",
-            "minSdkVersion": 19,
+            "minSdkVersion": 21,
             "targetSdkVersion": 32
           }
           EOF
@@ -94,7 +94,6 @@ jobs:
 
       - name: Generate Android project
         working-directory: ./twa
-        # --skipVersionUpgrade suppresses the "versionName?" interactive prompt
         run: bubblewrap update --skipVersionUpgrade
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: '1'
