@@ -79,14 +79,13 @@ jobs:
           }
           EOF
 
-          # Generate the checksum bubblewrap looks for so it skips
-          # the "regenerate project?" and "versionName?" prompts
+          # Write manifest-checksum.txt using SHA-1 (exact algorithm bubblewrap uses)
           node -e "
             const crypto = require('crypto');
             const fs = require('fs');
-            const manifest = fs.readFileSync('./twa/twa-manifest.json', 'utf8');
-            const hash = crypto.createHash('sha256').update(manifest).digest('hex');
-            fs.writeFileSync('./twa/.checksum', hash);
+            const manifest = fs.readFileSync('./twa/twa-manifest.json');
+            const hash = crypto.createHash('sha1').update(manifest).digest('hex');
+            fs.writeFileSync('./twa/manifest-checksum.txt', hash);
             console.log('Checksum written:', hash);
           "
 
