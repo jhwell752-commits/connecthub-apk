@@ -18,15 +18,20 @@ jobs:
 
       - name: Init Bubblewrap project
         run: |
-          expect -c '
-            set timeout 300
-            spawn bubblewrap init --manifest https://connecthub40.pages.dev/manifest.json --directory ./twa
-            expect "install the JDK" { send "y\r" }
-            expect "install the Android SDK" { send "y\r" }
-            expect "agree to the Android SDK terms" { send "y\r" }
-            expect "Application ID:" { send "com.connecthub.app\r" }
-            expect eof
-          '
+          cat > /tmp/bubblewrap_init.exp << 'EOF'
+          #!/usr/bin/expect -f
+          set timeout 600
+          spawn bubblewrap init --manifest https://connecthub40.pages.dev/manifest.json --directory ./twa
+          expect {
+            "install the JDK" { send "y\r"; exp_continue }
+            "install the Android SDK" { send "y\r"; exp_continue }
+            "agree to the Android SDK terms" { send "y\r"; exp_continue }
+            "Application ID:" { send "com.connecthub.app\r"; exp_continue }
+            eof
+          }
+          EOF
+          chmod +x /tmp/bubblewrap_init.exp
+          /tmp/bubblewrap_init.exp
           ls -la twa || echo "twa directory not created!"
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
