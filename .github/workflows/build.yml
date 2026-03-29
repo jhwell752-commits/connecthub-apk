@@ -21,9 +21,9 @@ jobs:
           expect -c '
             set timeout 300
             spawn bubblewrap init --manifest https://connecthub40.pages.dev/manifest.json --directory ./twa
-            expect "Y/n" { send "y\r" }
-            expect "Y/n" { send "y\r" }
-            expect "Y/n" { send "y\r" }
+            expect "install the JDK" { send "y\r" }
+            expect "install the Android SDK" { send "y\r" }
+            expect "agree to the Android SDK terms" { send "y\r" }
             expect "Application ID:" { send "com.connecthub.app\r" }
             expect eof
           '
