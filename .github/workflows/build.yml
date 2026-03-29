@@ -79,7 +79,7 @@ jobs:
           }
           EOF
 
-          # Write manifest-checksum.txt using SHA-1 (exact algorithm bubblewrap uses)
+          # SHA-1 checksum — exact algorithm bubblewrap uses
           node -e "
             const crypto = require('crypto');
             const fs = require('fs');
@@ -107,7 +107,8 @@ jobs:
         run: bubblewrap build --skipPwaValidation
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: '1'
-          BUBBLEWRAP_KEY_STORE_PASSWORD: connecthub123
+          # Exact env var names from bubblewrap source:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: connecthub123
           BUBBLEWRAP_KEY_PASSWORD: connecthub123
 
       - name: Upload APK
