@@ -44,7 +44,7 @@ jobs:
             { trigger: 'Splash screen color:',         answer: '' },
             { trigger: 'Icon URL: (',                  answer: '' },
             { trigger: 'Maskable icon URL: (',         answer: '' },
-            { trigger: 'Monochrome icon URL: (',       answer: '' },
+            { trigger: 'Monochrome icon URL: ()',      answer: '' },
             { trigger: 'Enable Play Billing',          answer: '' },
             { trigger: 'Enable Location Delegation',   answer: '' },
             { trigger: 'Key store location:',          answer: './android.keystore' },
