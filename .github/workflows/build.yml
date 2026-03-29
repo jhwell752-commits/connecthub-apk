@@ -17,7 +17,8 @@ jobs:
         run: |
           yes | bubblewrap init \
             --manifest https://connecthub40.pages.dev/manifest.json \
-            --directory ./twa
+            --directory ./twa \
+            --packageId com.connecthub.app
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
