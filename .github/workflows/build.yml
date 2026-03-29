@@ -15,7 +15,7 @@ jobs:
 
       - name: Init Bubblewrap project
         run: |
-          printf "y\ny\n" | bubblewrap init \
+          yes | bubblewrap init \
             --manifest https://connecthub40.pages.dev/manifest.json \
             --directory ./twa
         env:
@@ -24,7 +24,7 @@ jobs:
       - name: Build APK
         run: |
           cd twa
-          echo -e "\n\n\n\n\n\n" | bubblewrap build
+          yes | bubblewrap build
         env:
           BUBBLEWRAP_DISABLE_TELEMETRY: true
 
