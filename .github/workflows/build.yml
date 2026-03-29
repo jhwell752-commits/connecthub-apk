@@ -4,13 +4,37 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Build APK
-        uses: pwabuilder/pwabuilder-android-action@v1
+      - uses: actions/checkout@v4
+ 
+      - uses: actions/setup-node@v4
         with:
-          package-id: com.connecthub.app
-          manifest-url: https://connecthub40.pages.dev/manifest.json
-      - uses: actions/upload-artifact@v3
+          node-version: '18'
+ 
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+ 
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+ 
+      - name: Init Bubblewrap project
+        run: |
+          bubblewrap init \
+            --manifest https://connecthub40.pages.dev/manifest.json \
+            --directory ./twa \
+            --skip-prompt \
+            --package-id com.connecthub.app
+ 
+      - name: Build APK
+        run: |
+          cd twa
+          bubblewrap build --skip-prompt
+ 
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: connecthub-apk
-          path: '*.apk'
+          path: twa/*.apk
+ 
