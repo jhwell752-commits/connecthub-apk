@@ -1046,19 +1046,19 @@ async function loadFriendsList(){
     if(friendErr){console.error('friends query error:',friendErr);el.innerHTML='<p style="color:#c00;font-size:.8rem;padding:.75rem 1rem;">Error loading friends</p>';return;}
     if(!friendRows||!friendRows.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet — add someone in the Friends tab!</p>';buildStoryRow();return;}
 
-    // Step 2: Get user details for each friend ID
-    const ids=friendRows.map(r=>String(r.friend_id));
+    // Step 2: Get user details — pass IDs in their native type so Supabase matches correctly
+    const ids=friendRows.map(r=>r.friend_id);
     const{data:users,error:userErr}=await sb.from('users').select('id,username,snap_score,last_seen,display_name').in('id',ids);
-    if(userErr){console.error('users query error:',userErr);el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet — add someone in the Friends tab!</p>';buildStoryRow();return;}
-
+    if(userErr){console.error('users query error:',userErr);el.innerHTML='<p style="color:#c00;font-size:.8rem;padding:.75rem 1rem;">Error loading friends</p>';buildStoryRow();return;}
     if(!users||!users.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet</p>';buildStoryRow();return;}
 
-    // Build a map for quick lookup — key as String to match the ids array
+    // Build map keyed by stringified id for safe HTML attribute lookup
     const userMap={};
     users.forEach(u=>{userMap[String(u.id)]=u;});
 
-    // Sort: pinned first
-    const sorted=[...ids].sort((a,b)=>{
+    // Sort pinned first — use string keys to match map
+    const strIds=ids.map(String);
+    const sorted=[...strIds].sort((a,b)=>{
       const ap=_pinnedChats[a]?1:0,bp=_pinnedChats[b]?1:0;
       return bp-ap;
     });
@@ -1066,7 +1066,7 @@ async function loadFriendsList(){
     el.innerHTML=sorted.map(fId=>{
       const u=userMap[fId];
       if(!u)return'';
-      if(_blockedUsers.has(fId))return'';
+      if(_blockedUsers.has(Number(fId)))return'';
       const streak=_streaks[fId]||{count:0};
       const strkHtml=streak.count>=1?`<span class="streak-badge">🔥${streak.count}</span>`:'';
       const pinned=_pinnedChats[fId];
@@ -1077,7 +1077,7 @@ async function loadFriendsList(){
       }
       const displayLabel=esc(u.display_name||u.username);
       const initial=(u.display_name||u.username)[0].toUpperCase();
-      return`<div class="friend-row${friendId===fId?' selected':''}" onclick="selectFriend('${fId}','${esc(u.username)}',${u.snap_score||0})">
+      return`<div class="friend-row${Number(friendId)===Number(fId)?' selected':''}" onclick="selectFriend('${fId}','${esc(u.username)}',${u.snap_score||0})">
         <div class="f-avatar">${initial}${onlineHtml}</div>
         <div class="f-info">
           <div class="f-name">${displayLabel}</div>
@@ -1094,7 +1094,7 @@ async function loadFriendsList(){
 }
 
 window.selectFriend=function(fId,fName,fScore){
-  fId=String(fId);
+  fId=Number(fId);
   _lastTypingState=false;clearTimeout(_typingTimeout);
   document.getElementById('typingInd').classList.remove('show');
   clearReply();closeGifPicker();
@@ -1163,11 +1163,11 @@ async function loadMessages(){
   if(error){console.error(error);return;}
   const c=document.getElementById('chatMsgs');
   if(!data||!data.length){c.innerHTML='<p style="text-align:center;color:#bbb;font-size:.85rem;margin:auto;">No messages yet. Say hi! 👋</p>';return;}
-  const unread=data.filter(m=>m.sender_id===friendId&&!m.read_at);
+  const unread=data.filter(m=>Number(m.sender_id)===Number(friendId)&&!m.read_at);
   if(unread.length)sb.from('messages').update({read_at:new Date().toISOString()}).in('id',unread.map(m=>m.id)).then(()=>{});
   c.innerHTML=data.filter(m=>m.type!=='system'||!m.content?.startsWith('__CALL_SIGNAL__')).map(m=>{
     if(m.type==='system')return`<div class="bw"><div class="bubble system">${esc(m.content)}</div></div>`;
-    const mine=m.sender_id===me.id,wc='bw '+(mine?'mine':'theirs');
+    const mine=Number(m.sender_id)===Number(me.id),wc='bw '+(mine?'mine':'theirs');
     const del=mine?`<button class="del-btn" onclick="deleteMsg(${m.id})">✕</button>`:'';
     const reactions=getReactions(m.id);
     const reactBar=Object.entries(reactions).filter(([,ids])=>ids.length>0).map(([emoji,ids])=>`<span class="reaction-chip" onclick="addReaction(${m.id},'${emoji}',null)">${emoji}<span>${ids.length}</span></span>`).join('');
@@ -1284,7 +1284,7 @@ async function loadGroupMessages(){
   const c=document.getElementById('groupMsgs');
   if(!data||!data.length){c.innerHTML='<p style="color:#bbb;font-size:.82rem;text-align:center;margin:auto;">No messages yet</p>';return;}
   c.innerHTML=data.map(m=>{
-    const mine=m.sender_id===me.id,wc='bw '+(mine?'mine':'theirs');
+    const mine=Number(m.sender_id)===Number(me.id),wc='bw '+(mine?'mine':'theirs');
     return`<div class="${wc}">${!mine?`<span style="font-size:.68rem;color:#aaa;margin-bottom:2px;">${esc(m.users?.username||'?')}</span>`:''}<div class="bubble ${mine?'mine':'theirs'}">${esc(m.content)}</div><span class="btime">${fmtTime(m.created_at)}</span></div>`;
   }).join('');
   c.scrollTop=c.scrollHeight;
@@ -1329,8 +1329,8 @@ async function loadRequests(){
   const list=document.getElementById('requestsList'),badge=document.getElementById('reqBadge');
   if(reqErr||!reqs||!reqs.length){list.innerHTML='<p style="color:#aaa;font-size:.82rem;">No pending requests</p>';badge.style.display='none';return;}
 
-  // Step 2: Look up usernames for each sender separately
-  const fromIds=reqs.map(r=>String(r.from_id));
+  // Step 2: Look up usernames for each sender separately — native type for DB query
+  const fromIds=reqs.map(r=>r.from_id);
   const{data:senders}=await sb.from('users').select('id,username').in('id',fromIds);
   const senderMap={};if(senders)senders.forEach(u=>{senderMap[String(u.id)]=u.username;});
 
@@ -1343,14 +1343,15 @@ async function loadRequests(){
 }
 
 window.acceptReq=async(reqId,fromId)=>{
-  fromId=String(fromId);
-  await sb.from('friend_requests').update({status:'accepted'}).eq('id',reqId);
-  // Upsert both directions so the friend shows up for both users
+  // Keep fromId as its native DB type (integer) for the upsert — don't stringify
+  const{error:updErr}=await sb.from('friend_requests').update({status:'accepted'}).eq('id',reqId);
+  if(updErr){console.error('acceptReq update error:',updErr);alert2('❌ Error accepting request');return;}
+  // Insert both directions
   const{error}=await sb.from('friends').upsert([
     {user_id:me.id,friend_id:fromId},
     {user_id:fromId,friend_id:me.id}
   ],{onConflict:'user_id,friend_id'});
-  if(error)console.error('friend upsert error:',error);
+  if(error){console.error('friend upsert error:',error);alert2('❌ Error adding friend: '+error.message);return;}
   await loadRequests();await loadFriendsList();await loadAllFriends();
   alert2('✅ Friend added!');
 };
@@ -1360,7 +1361,7 @@ async function loadAllFriends(){
   const{data:friendRows}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
   const c=document.getElementById('allFriendsList');
   if(!friendRows||!friendRows.length){c.innerHTML='<p style="color:#aaa;font-size:.82rem;">No friends yet</p>';return;}
-  const ids=friendRows.map(r=>String(r.friend_id));
+  const ids=friendRows.map(r=>r.friend_id); // native type for DB query
   const{data:users}=await sb.from('users').select('id,username,snap_score').in('id',ids);
   if(!users||!users.length){c.innerHTML='<p style="color:#aaa;font-size:.82rem;">No friends yet</p>';return;}
   c.innerHTML=users.map(u=>`<div style="background:#f5f5f5;border-radius:.85rem;padding:.75rem;text-align:center;border:1px solid #efefef;cursor:pointer;" onclick="selectFriend('${u.id}','${esc(u.username)}',${u.snap_score||0});switchTab('chats')"><div style="width:38px;height:38px;border-radius:50%;background:#FFFC00;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;margin:0 auto .35rem;">${esc(u.username[0].toUpperCase())}</div><p style="font-weight:600;font-size:.8rem;">${esc(u.username)}</p><span class="score-badge">👻 ${u.snap_score||0}</span></div>`).join('');
@@ -1492,7 +1493,7 @@ async function _pollTyping(){
   if(!friendId||!me)return;
   try{
     const{data}=await sb.from('users').select('typing_to').eq('id',friendId).single();
-    const isTyping=data&&data.typing_to===me.id;
+    const isTyping=data&&Number(data.typing_to)===Number(me.id);
     const ind=document.getElementById('typingInd'),av=document.getElementById('typingAv');
     if(ind){
       if(isTyping){ind.classList.add('show');if(av)av.textContent=friendName?.[0]?.toUpperCase()||'?';const c=document.getElementById('chatMsgs');if(c)c.scrollTop=c.scrollHeight;}
@@ -1541,7 +1542,7 @@ function initPeer(){
     if(currentCall){call.close();return;}
     incomingCall=call;
     const caller=call.peer.replace('ch_','');
-    if(_blockedUsers.has(caller)){call.close();return;}
+    if(_blockedUsers.has(Number(caller))){call.close();return;}
     const isVid=call.metadata?.type!=='audio';
     document.getElementById('callerLabel').textContent=caller;
     document.getElementById('callTypeLabel').textContent=isVid?'📹 Video call…':'📞 Audio call…';
@@ -2055,7 +2056,7 @@ async function _pollCallSignals(){
     if(m.id===_lastSigId)return;
     _lastSigId=m.id;
     if(Date.now()-new Date(m.created_at).getTime()>30000)return;
-    if(_blockedUsers.has(m.sender_id)){await sb.from('messages').delete().eq('id',m.id);return;}
+    if(_blockedUsers.has(Number(m.sender_id))){await sb.from('messages').delete().eq('id',m.id);return;}
     const parts=m.content.split(':');
     if(parts[1]==='calling'&&parts[3]&&!incomingCall&&!currentCall){
       const isVid=parts[2]!=='audio';
@@ -2223,14 +2224,14 @@ function startPolling(){
     // Unread notifications
     const{data:friendRows}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
     if(friendRows&&friendRows.length){
-      const ids=friendRows.map(r=>String(r.friend_id));
+      const ids=friendRows.map(r=>r.friend_id); // native type for DB query
       const{data:users}=await sb.from('users').select('id,username').in('id',ids);
-      const userMap={};if(users)users.forEach(u=>userMap[u.id]=u);
+      const userMap={};if(users)users.forEach(u=>userMap[Number(u.id)]=u);
       for(const row of friendRows){
-        const fId=String(row.friend_id); // Bug 3 fix: always string for consistent comparisons
-        if(fId===friendId)continue;
+        const fId=Number(row.friend_id); // native number for comparisons
+        if(fId===Number(friendId))continue;
         if(_blockedUsers.has(fId))continue;
-        const{data:msgs}=await sb.from('messages').select('id,content,type').eq('sender_id',fId).eq('receiver_id',me.id).order('id',{ascending:false}).limit(1);
+        const{data:msgs}=await sb.from('messages').select('id,content,type').eq('sender_id',row.friend_id).eq('receiver_id',me.id).order('id',{ascending:false}).limit(1);
         if(!msgs?.length)continue;
         const lastId=msgs[0].id,prevId=_lastMsgCount[fId];
         if(lastId!==prevId){
