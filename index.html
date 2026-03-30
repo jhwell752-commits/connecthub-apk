@@ -1053,9 +1053,9 @@ async function loadFriendsList(){
 
     if(!users||!users.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet</p>';buildStoryRow();return;}
 
-    // Build a map for quick lookup
+    // Build a map for quick lookup — key as String to match the ids array
     const userMap={};
-    users.forEach(u=>{userMap[u.id]=u;});
+    users.forEach(u=>{userMap[String(u.id)]=u;});
 
     // Sort: pinned first
     const sorted=[...ids].sort((a,b)=>{
@@ -1077,7 +1077,7 @@ async function loadFriendsList(){
       }
       const displayLabel=esc(u.display_name||u.username);
       const initial=(u.display_name||u.username)[0].toUpperCase();
-      return`<div class="friend-row${friendId===fId?' selected':''}" onclick="selectFriend(${fId},'${esc(u.username)}',${u.snap_score||0})">
+      return`<div class="friend-row${friendId===fId?' selected':''}" onclick="selectFriend('${fId}','${esc(u.username)}',${u.snap_score||0})">
         <div class="f-avatar">${initial}${onlineHtml}</div>
         <div class="f-info">
           <div class="f-name">${displayLabel}</div>
@@ -1363,7 +1363,7 @@ async function loadAllFriends(){
   const ids=friendRows.map(r=>String(r.friend_id));
   const{data:users}=await sb.from('users').select('id,username,snap_score').in('id',ids);
   if(!users||!users.length){c.innerHTML='<p style="color:#aaa;font-size:.82rem;">No friends yet</p>';return;}
-  c.innerHTML=users.map(u=>`<div style="background:#f5f5f5;border-radius:.85rem;padding:.75rem;text-align:center;border:1px solid #efefef;cursor:pointer;" onclick="selectFriend(${u.id},'${esc(u.username)}',${u.snap_score||0});switchTab('chats')"><div style="width:38px;height:38px;border-radius:50%;background:#FFFC00;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;margin:0 auto .35rem;">${esc(u.username[0].toUpperCase())}</div><p style="font-weight:600;font-size:.8rem;">${esc(u.username)}</p><span class="score-badge">👻 ${u.snap_score||0}</span></div>`).join('');
+  c.innerHTML=users.map(u=>`<div style="background:#f5f5f5;border-radius:.85rem;padding:.75rem;text-align:center;border:1px solid #efefef;cursor:pointer;" onclick="selectFriend('${u.id}','${esc(u.username)}',${u.snap_score||0});switchTab('chats')"><div style="width:38px;height:38px;border-radius:50%;background:#FFFC00;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;margin:0 auto .35rem;">${esc(u.username[0].toUpperCase())}</div><p style="font-weight:600;font-size:.8rem;">${esc(u.username)}</p><span class="score-badge">👻 ${u.snap_score||0}</span></div>`).join('');
 }
 
 /* ══ BITMOJI ══ */
