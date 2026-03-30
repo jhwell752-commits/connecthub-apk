@@ -196,8 +196,10 @@ body.dark .req-item{background:#1e1e1e;border-color:#333;}
 .mob-nav-btn i{font-size:1.2rem;}
 .mob-nav-btn.active{color:#1a1a1a;}
 .mob-nav-cam{flex:1;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;}
-.mob-nav-cam-inner{width:52px;height:52px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+.mob-nav-cam-inner{width:52px;height:52px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.18);transition:background .2s,box-shadow .2s;}
 .mob-nav-cam-inner i{color:#fff;font-size:1.3rem;}
+.mob-nav-cam.cam-disabled .mob-nav-cam-inner{background:#ccc;box-shadow:none;}
+.mob-nav-cam.cam-disabled .mob-nav-cam-inner i{color:#fff;opacity:.5;}
 @media(max-width:700px){
   .mob-nav{display:flex;}
 }
@@ -374,15 +376,12 @@ body.dark .req-item{background:#1e1e1e;border-color:#333;}
 <body>
 
 <script>
-if('serviceWorker' in navigator){
-  const swCode=`
-self.addEventListener('push',function(e){const d=e.data?e.data.json():{title:'ConnectHub',body:'New message'};e.waitUntil(self.registration.showNotification(d.title,{body:d.body,icon:'/icon-192.png',tag:d.tag||'msg',vibrate:[200,100,200],data:d}));});
-self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.openWindow('/'));});
-self.addEventListener('message',function(e){if(e.data&&e.data.type==='KEEP_ALIVE'){}});
-`;
-  const blob=new Blob([swCode],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).then(reg=>{window._swReg=reg;}).catch(()=>{});
-}
+// Service workers cannot be registered from a blob: or data: URL in any browser.
+// Since ConnectHub is a single HTML file with no separate sw.js, we skip SW
+// registration entirely and rely on the Web Notifications API directly.
+// _sendNotif() handles foreground (alert2 toast) and background (new Notification())
+// without needing a SW. window._swReg stays null intentionally.
+window._swReg=null;
 </script>
 
 <div id="incomingBar">
@@ -740,7 +739,7 @@ self.addEventListener('message',function(e){if(e.data&&e.data.type==='KEEP_ALIVE
       <button class="mob-nav-btn" onclick="alert2('🗺️ Snap Map coming soon!')">
         <i class="fas fa-map-marker-alt"></i><span>Map</span>
       </button>
-      <button class="mob-nav-cam" onclick="openSnapCamera()">
+      <button class="mob-nav-cam cam-disabled" id="mobCamBtn" onclick="openSnapCamera()">
         <div class="mob-nav-cam-inner"><i class="fas fa-camera"></i></div>
       </button>
       <button class="mob-nav-btn" onclick="openStoriesTab()">
@@ -837,7 +836,7 @@ document.getElementById('signupBtn').onclick=async()=>{
     if(error)return toast('Signup failed: '+error.message);
     toast('Account created! Log in now.',true);
   }catch(e){toast('Error: '+e.message);}
-  finally{setAuthLoading(false);}
+  finally{setAuthLoading(false);document.getElementById('loginBtn').textContent='Log In';}
 };
 
 /* ══ BOOT ══ */
@@ -890,6 +889,7 @@ function doLogout(){
   if(peer)try{peer.destroy();}catch(e){}
   if(_wakeLock)try{_wakeLock.release();}catch(e){}
   me=null;friendId=null;groupId=null;currentCall=null;localStream=null;
+  _syncCamBtn();
   hidePip();hideModal();
   document.getElementById('mainApp').style.display='none';
   document.getElementById('mainApp').classList.remove('visible');
@@ -1047,9 +1047,9 @@ async function loadFriendsList(){
     if(!friendRows||!friendRows.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet — add someone in the Friends tab!</p>';buildStoryRow();return;}
 
     // Step 2: Get user details for each friend ID
-    const ids=friendRows.map(r=>r.friend_id);
+    const ids=friendRows.map(r=>String(r.friend_id));
     const{data:users,error:userErr}=await sb.from('users').select('id,username,snap_score,last_seen,display_name').in('id',ids);
-    if(userErr){console.error('users query error:',userErr);el.innerHTML='<p style="color:#c00;font-size:.8rem;padding:.75rem 1rem;">Error loading user data</p>';return;}
+    if(userErr){console.error('users query error:',userErr);el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet — add someone in the Friends tab!</p>';buildStoryRow();return;}
 
     if(!users||!users.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet</p>';buildStoryRow();return;}
 
@@ -1094,6 +1094,7 @@ async function loadFriendsList(){
 }
 
 window.selectFriend=function(fId,fName,fScore){
+  fId=String(fId);
   _lastTypingState=false;clearTimeout(_typingTimeout);
   document.getElementById('typingInd').classList.remove('show');
   clearReply();closeGifPicker();
@@ -1116,6 +1117,7 @@ window.selectFriend=function(fId,fName,fScore){
   document.getElementById('groupInput').style.display='none';
   document.querySelectorAll('.friend-row').forEach(r=>{r.classList.toggle('selected',r.getAttribute('onclick')?.includes('selectFriend('+fId+','));});
   closeSidebar();
+  _syncCamBtn();
   loadMessages();
 };
 
@@ -1322,16 +1324,26 @@ document.getElementById('sendReqBtn').onclick=async()=>{
 document.getElementById('addFriendInput').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('sendReqBtn').click();});
 
 async function loadRequests(){
-  const{data}=await sb.from('friend_requests').select('id,from_id,users!friend_requests_from_id_fkey(username)').eq('to_id',me.id).eq('status','pending');
+  // Step 1: Get pending requests (no FK join — alias may not exist in all schemas)
+  const{data:reqs,error:reqErr}=await sb.from('friend_requests').select('id,from_id').eq('to_id',me.id).eq('status','pending');
   const list=document.getElementById('requestsList'),badge=document.getElementById('reqBadge');
-  if(!data||!data.length){list.innerHTML='<p style="color:#aaa;font-size:.82rem;">No pending requests</p>';badge.style.display='none';return;}
-  badge.style.display='inline';badge.textContent=data.length;
-  const nb=document.getElementById('navReqBadge');if(nb){nb.style.display='inline';nb.textContent=data.length;}
-  list.innerHTML=data.map(r=>`<div class="req-item"><span>👤 ${esc(r.users?.username||'?')}</span><div style="display:flex;gap:.35rem;"><button onclick="acceptReq(${r.id},${r.from_id})" style="background:#22c55e;color:#fff;border:none;border-radius:999px;padding:3px 12px;font-size:.75rem;font-weight:700;cursor:pointer;">Accept</button><button onclick="declineReq(${r.id})" style="background:#ff4d4d;color:#fff;border:none;border-radius:999px;padding:3px 10px;font-size:.75rem;font-weight:700;cursor:pointer;">✕</button></div></div>`).join('');
-  loadAllFriends();
+  if(reqErr||!reqs||!reqs.length){list.innerHTML='<p style="color:#aaa;font-size:.82rem;">No pending requests</p>';badge.style.display='none';return;}
+
+  // Step 2: Look up usernames for each sender separately
+  const fromIds=reqs.map(r=>String(r.from_id));
+  const{data:senders}=await sb.from('users').select('id,username').in('id',fromIds);
+  const senderMap={};if(senders)senders.forEach(u=>{senderMap[String(u.id)]=u.username;});
+
+  badge.style.display='inline';badge.textContent=reqs.length;
+  const nb=document.getElementById('navReqBadge');if(nb){nb.style.display='inline';nb.textContent=reqs.length;}
+  list.innerHTML=reqs.map(r=>{
+    const uname=senderMap[String(r.from_id)]||'Unknown user';
+    return`<div class="req-item"><span>👤 ${esc(uname)}</span><div style="display:flex;gap:.35rem;"><button onclick="acceptReq(${r.id},${r.from_id})" style="background:#22c55e;color:#fff;border:none;border-radius:999px;padding:3px 12px;font-size:.75rem;font-weight:700;cursor:pointer;">Accept</button><button onclick="declineReq(${r.id})" style="background:#ff4d4d;color:#fff;border:none;border-radius:999px;padding:3px 10px;font-size:.75rem;font-weight:700;cursor:pointer;">✕</button></div></div>`;
+  }).join('');
 }
 
 window.acceptReq=async(reqId,fromId)=>{
+  fromId=String(fromId);
   await sb.from('friend_requests').update({status:'accepted'}).eq('id',reqId);
   // Upsert both directions so the friend shows up for both users
   const{error}=await sb.from('friends').upsert([
@@ -1348,7 +1360,7 @@ async function loadAllFriends(){
   const{data:friendRows}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
   const c=document.getElementById('allFriendsList');
   if(!friendRows||!friendRows.length){c.innerHTML='<p style="color:#aaa;font-size:.82rem;">No friends yet</p>';return;}
-  const ids=friendRows.map(r=>r.friend_id);
+  const ids=friendRows.map(r=>String(r.friend_id));
   const{data:users}=await sb.from('users').select('id,username,snap_score').in('id',ids);
   if(!users||!users.length){c.innerHTML='<p style="color:#aaa;font-size:.82rem;">No friends yet</p>';return;}
   c.innerHTML=users.map(u=>`<div style="background:#f5f5f5;border-radius:.85rem;padding:.75rem;text-align:center;border:1px solid #efefef;cursor:pointer;" onclick="selectFriend(${u.id},'${esc(u.username)}',${u.snap_score||0});switchTab('chats')"><div style="width:38px;height:38px;border-radius:50%;background:#FFFC00;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;margin:0 auto .35rem;">${esc(u.username[0].toUpperCase())}</div><p style="font-weight:600;font-size:.8rem;">${esc(u.username)}</p><span class="score-badge">👻 ${u.snap_score||0}</span></div>`).join('');
@@ -1492,16 +1504,15 @@ async function _pollTyping(){
 /* ══ NOTIFICATIONS ══ */
 async function _requestNotifPerms(){if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission();}
 function _sendNotif(title,body,tag='msg'){
+  // Foreground: show an in-app toast instead of a system notification
+  if(!document.hidden){alert2('🔔 '+title+': '+body);return;}
+  // Background: use Web Notifications API directly (no SW needed for JS-triggered notifs)
   if(!('Notification' in window)||Notification.permission!=='granted')return;
-  if(window._swReg&&document.hidden){
-    window._swReg.showNotification(title,{body,icon:'/icon-192.png',tag,vibrate:[200,100,200]}).catch(()=>{
-      try{const n=new Notification(title,{body,tag});n.onclick=()=>{window.focus();n.close();};setTimeout(()=>n.close(),5000);}catch(e){}
-    });
-  }else if(!document.hidden){
-    alert2('🔔 '+title+': '+body);
-  }else{
-    try{const n=new Notification(title,{body,tag});n.onclick=()=>{window.focus();n.close();};setTimeout(()=>n.close(),5000);}catch(e){}
-  }
+  try{
+    const n=new Notification(title,{body,tag,icon:'/icon-192.png'});
+    n.onclick=()=>{window.focus();n.close();};
+    setTimeout(()=>n.close(),6000);
+  }catch(e){}
 }
 
 /* ══════════════════════════════════════════════════
@@ -1825,7 +1836,9 @@ async function endCall(fromRemote=false){
   hideModal();hidePip();
   document.getElementById('pipBadge').classList.remove('show');
   document.getElementById('joinBanner').classList.remove('show');
-  _lastTypingState=true;_setTyping(false);clearTimeout(_typingTimeout);
+  _lastTypingState=false;clearTimeout(_typingTimeout);
+  // Directly clear typing state in DB — don't rely on _setTyping's dedup guard
+  if(me)sb.from('users').update({typing_to:null}).eq('id',me.id).catch(()=>{});
   _stopKeepAlive();_appInBackground=false;
   setTimeout(()=>{if(me)initPeer();},500);
   if(friendId&&me&&sec>0){
@@ -1959,7 +1972,6 @@ let _bgPollInterval=null; // NEW: heartbeat to detect missed events
 
 function _startKeepAlive(){
   _keepAliveInterval=setInterval(()=>{
-    if(window._swReg?.active)window._swReg.active.postMessage({type:'KEEP_ALIVE',callActive:!!currentCall});
     if(me&&currentCall)sb.from('users').update({last_seen:new Date().toISOString()}).eq('id',me.id).catch(()=>{});
   },20000);
 }
@@ -2062,8 +2074,18 @@ async function _notifyCallSignal(toId,action,type){
 
 /* ══ SNAP CAMERA ══ */
 let _snapStream=null,_snapFacing='user',_snapDataUrl=null;
+function _syncCamBtn(){
+  const btn=document.getElementById('mobCamBtn');if(!btn)return;
+  if(friendId){btn.classList.remove('cam-disabled');btn.title='';}
+  else{btn.classList.add('cam-disabled');btn.title='Select a friend first';}
+}
 async function openSnapCamera(){
-  if(!friendId)return toast('Select a friend first');
+  if(!friendId){
+    // Show an inline prompt to go pick a friend rather than a silent toast
+    alert2('👻 Open a chat first to send a snap!');
+    switchTab('chats',null,true);
+    return;
+  }
   document.getElementById('snapModal').style.display='flex';await _startSnapStream();
 }
 async function _startSnapStream(){
@@ -2134,12 +2156,12 @@ async function searchGifs(q){
     if(!data.results?.length){grid.innerHTML='<div style="padding:.5rem;color:#aaa;font-size:.8rem;text-align:center;">No GIFs found</div>';return;}
     grid.innerHTML=data.results.map(r=>{
       const url=r.media_formats?.gif?.url||r.media_formats?.tinygif?.url||'';
-      return url?`<div class="gif-item" onclick="sendGif('${url}')"><img src="${url}" loading="lazy"></div>`:'';
+      return url?`<div class="gif-item" onclick="sendGif(this.dataset.url)" data-url="${esc(url)}"><img src="${esc(url)}" loading="lazy"></div>`:'';
     }).join('');
   }catch(e){grid.innerHTML='<div style="padding:.5rem;color:#aaa;font-size:.8rem;text-align:center;">Tenor API error</div>';}
 }
 async function sendGif(url){
-  if(!friendId||!me)return;closeGifPicker();
+  if(!url||!friendId||!me)return;closeGifPicker();
   await sb.from('messages').insert([{sender_id:me.id,receiver_id:friendId,sender_name:me.username,content:url,type:'gif'}]);
   await loadMessages();
 }
@@ -2200,13 +2222,12 @@ function startPolling(){
     sb.from('users').update({last_seen:new Date().toISOString()}).eq('id',me.id).catch(()=>{});
     // Unread notifications
     const{data:friendRows}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
-    if(friendRows){
-      const ids=friendRows.map(r=>r.friend_id);
-      if(!ids.length)return;
+    if(friendRows&&friendRows.length){
+      const ids=friendRows.map(r=>String(r.friend_id));
       const{data:users}=await sb.from('users').select('id,username').in('id',ids);
       const userMap={};if(users)users.forEach(u=>userMap[u.id]=u);
       for(const row of friendRows){
-        const fId=row.friend_id;
+        const fId=String(row.friend_id); // Bug 3 fix: always string for consistent comparisons
         if(fId===friendId)continue;
         if(_blockedUsers.has(fId))continue;
         const{data:msgs}=await sb.from('messages').select('id,content,type').eq('sender_id',fId).eq('receiver_id',me.id).order('id',{ascending:false}).limit(1);
