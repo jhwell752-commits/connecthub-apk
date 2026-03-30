@@ -1043,13 +1043,22 @@ async function loadFriendsList(){
   try{
     // Step 1: Get friend IDs from friends table
     const{data:friendRows,error:friendErr}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
-    if(friendErr){console.error('friends query error:',friendErr);el.innerHTML='<p style="color:#c00;font-size:.8rem;padding:.75rem 1rem;">Error loading friends</p>';return;}
+    if(friendErr){
+      console.error('friends query error:',friendErr);
+      const hint=friendErr.code==='42501'?'RLS policy blocking access.':friendErr.message;
+      el.innerHTML='<p style="color:#c00;font-size:.78rem;padding:.75rem 1rem;">Error loading friends<br><span style="opacity:.7;font-size:.72rem;">'+hint+'</span></p>';
+      return;
+    }
     if(!friendRows||!friendRows.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet — add someone in the Friends tab!</p>';buildStoryRow();return;}
 
     // Step 2: Get user details — pass IDs in their native type so Supabase matches correctly
     const ids=friendRows.map(r=>r.friend_id);
     const{data:users,error:userErr}=await sb.from('users').select('id,username,snap_score,last_seen,display_name').in('id',ids);
-    if(userErr){console.error('users query error:',userErr);el.innerHTML='<p style="color:#c00;font-size:.8rem;padding:.75rem 1rem;">Error loading friends</p>';buildStoryRow();return;}
+    if(userErr){
+      console.error('users query error:',userErr);
+      el.innerHTML='<p style="color:#c00;font-size:.78rem;padding:.75rem 1rem;">Error loading profiles<br><span style="opacity:.7;font-size:.72rem;">'+userErr.message+'</span></p>';
+      buildStoryRow();return;
+    }
     if(!users||!users.length){el.innerHTML='<p style="color:#bbb;font-size:.8rem;padding:.75rem 1rem;">No friends yet</p>';buildStoryRow();return;}
 
     // Build map keyed by stringified id for safe HTML attribute lookup
