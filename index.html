@@ -413,7 +413,7 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;color:#1a1a1a;padding
       <div class="ctrl on" id="camBtn" onclick="toggleCam()"><i class="fas fa-video" id="camIcon"></i></div>
       <div class="ctrl off" id="flipBtn" onclick="flipCallCamera()" style="display:none;"><i class="fas fa-sync-alt"></i></div>
       <div class="ctrl rec-off" id="recBtn" onclick="toggleRecording()"><i class="fas fa-circle" id="recIcon"></i></div>
-      <div class="ctrl off" id="screenBtn" onclick="toggleScreenShare()"><i class="fas fa-desktop" id="screenIcon"></i></div>
+
       <div class="ctrl end" onclick="endCall()"><i class="fas fa-phone-slash"></i></div>
       <div class="ctrl off" onclick="minimiseToPip()"><i class="fas fa-compress-alt"></i></div>
     </div>
@@ -702,7 +702,7 @@ let peer=null,currentCall=null,localStream=null,incomingCall=null,_remoteStream=
 let callStartTime=null,callTimerInterval=null;
 let isMicOn=true,isCamOn=true,isVideoCall=true;
 let _callFacingMode='user';
-let _screenShareStream=null,_isScreenSharing=false;
+
 let _myBitmoji='👻';
 let _stories={};
 let _storyQueue=[],_storyIdx=0,_storySegInt=null;
@@ -1068,62 +1068,8 @@ async function flipCallCamera(){
   }catch(e){toast('Camera flip error: '+e.message);}
 }
 
-/* ══ FIXED SCREEN SHARE — canvas composite ══ */
-async function toggleScreenShare(){
-  if(_isScreenSharing){
-    _stopScreenShare();
-  }else{
-    if(!currentCall)return toast('Start a call first');
-    try{
-      _screenShareStream=await navigator.mediaDevices.getDisplayMedia({video:{cursor:'always'},audio:false});
-    }catch(e){if(e.name!=='NotAllowedError')toast('Screen share error: '+e.message);return;}
-    const screenTrack=_screenShareStream.getVideoTracks()[0];
-    const pc=currentCall.peerConnection;
-    try{
-      const sender=pc?.getSenders().find(s=>s.track?.kind==='video');
-      if(sender)await sender.replaceTrack(screenTrack);
-      else if(pc)pc.addTrack(screenTrack,_screenShareStream);
-    }catch(e){toast('Screen share routing error: '+e.message);_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;return;}
-    document.getElementById('localVideo').srcObject=_screenShareStream;
-    document.getElementById('localVideo').style.transform='none';
-    document.getElementById('localVideo').classList.remove('cam-off');
-    _isScreenSharing=true;
-    document.getElementById('screenBtn').className='ctrl on';
-    document.getElementById('screenIcon').className='fas fa-desktop';
-    document.getElementById('callTypeLbl').textContent='🖥️ Sharing Screen';
-    screenTrack.onended=()=>{if(_isScreenSharing)_stopScreenShare();};
-  }
-}
 
-async function _stopScreenShare(){
-  if(_screenShareStream){_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;}
-  _isScreenSharing=false;
-  document.getElementById('screenBtn').className='ctrl off';
-  document.getElementById('screenIcon').className='fas fa-desktop';
-  document.getElementById('callTypeLbl').textContent=isVideoCall?'📹 Video Call':'📞 Audio Call';
-  const pc=currentCall?.peerConnection;
-  try{
-    if(isVideoCall){
-      const cs=await _getStream('video');
-      const cvt=cs.getVideoTracks()[0];
-      const s=pc?.getSenders().find(s=>s.track?.kind==='video');
-      if(s&&cvt)await s.replaceTrack(cvt);
-      localStream=cs;
-    }else{
-      const as=await _getStream('audio');
-      const at=as.getAudioTracks()[0];
-      const s=pc?.getSenders().find(s=>s.track?.kind==='audio');
-      if(s&&at)await s.replaceTrack(at);
-      localStream=as;
-    }
-    document.getElementById('localVideo').srcObject=localStream;
-    document.getElementById('localVideo').style.transform='scaleX(-1)';
-    document.getElementById('localVideo').classList.toggle('cam-off',!isCamOn);
-    _attachPip();
-  }catch(e){console.warn('stop screen share error',e);}
-}
-
-/* ══ FIXED RECORDING — uses canvas composite ══ */
+/* ══ RECORDING ══ */
 let _recCanvas=null,_recCtx=null,_recAudioCtx=null,_recAnimId=null;
 
 async function toggleRecording(){if(_isRecording)_stopRecording();else await _startRecording();}
@@ -1146,7 +1092,7 @@ async function _startRecording(){
       if(!_isRecording){cancelAnimationFrame(_recAnimId);return;}
       _recCtx.fillStyle='#000';_recCtx.fillRect(0,0,1280,720);
       if(rv.readyState>=2)_recCtx.drawImage(rv,0,0,1280,720);
-      if(lv.readyState>=2&&isCamOn&&!_isScreenSharing){
+      if(lv.readyState>=2&&isCamOn){
         const pw=220,ph=165,px=1280-pw-12,py=720-ph-12;
         _recCtx.drawImage(lv,px,py,pw,ph);
         _recCtx.strokeStyle='rgba(255,252,0,.8)';_recCtx.lineWidth=3;_recCtx.strokeRect(px,py,pw,ph);
@@ -1219,8 +1165,7 @@ async function endCall(fromRemote=false){
   if(currentCall&&!fromRemote)try{currentCall.close();}catch(e){}
   currentCall=null;_remoteStream=null;_localIsSmall=true;
   _updateCallBtns();
-  if(_screenShareStream){_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;}
-  _isScreenSharing=false;
+
   if(_isRecording)_stopRecording();
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
   const lv=document.getElementById('localVideo'),rv=document.getElementById('remoteVideo');
@@ -1372,31 +1317,65 @@ _pipEl.addEventListener('pointerup',e=>{
 _pipEl.addEventListener('pointercancel',()=>{_pipDrag=false;_pipEl.classList.remove('pip-drag');});
 window.addEventListener('resize',()=>{if(_pipEl.classList.contains('pip-visible')&&_pipX!==null)_setPipPos(_pipX,_pipY);});
 
-/* ══ VISIBILITY CHANGE — Capacitor-safe PiP ══ */
-document.addEventListener('visibilitychange',()=>{
+/* ══ PiP ON BACKGROUND — multiple triggers for Capacitor Android ══
+   Android Capacitor WebView fires these when home is pressed:
+   1. visibilitychange (sometimes)
+   2. window 'blur' (sometimes)
+   3. Capacitor App 'appStateChange' (most reliable — if plugin available)
+   We listen to ALL THREE so at least one always fires.
+══════════════════════════════════════════════════════════════════ */
+let _appInBackground=false;
+
+function _onAppBackground(){
+  if(_appInBackground)return; // debounce — all three events may fire
+  _appInBackground=true;
   if(!currentCall)return;
-  if(document.hidden){
-    if(!document.pictureInPictureElement){
-      document.getElementById('videoModal').style.display='none';
-      showPip();
-    }
-  }else{
-    if(document.pictureInPictureElement)try{document.exitPictureInPicture();}catch(e){}
-    _reattachMainStreams();
-    _pipBadge.classList.remove('show');
-    if(_pipEl.classList.contains('pip-visible')){hidePip();openModal();}
-    else{openModal();}
-  }
+  document.getElementById('videoModal').style.display='none';
+  showPip();
+}
+
+function _onAppForeground(){
+  if(!_appInBackground)return;
+  _appInBackground=false;
+  if(!currentCall)return;
+  _reattachMainStreams();
+  _pipBadge.classList.remove('show');
+  if(_pipEl.classList.contains('pip-visible')){hidePip();openModal();}
+  else openModal();
+}
+
+// 1. Standard visibility API
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)_onAppBackground();
+  else _onAppForeground();
 });
+
+// 2. window blur/focus — fires on Android when switching apps
+window.addEventListener('blur',()=>_onAppBackground());
+window.addEventListener('focus',()=>_onAppForeground());
+
+// 3. Capacitor App plugin — most reliable on Android
+(()=>{
+  const tryCapacitor=()=>{
+    if(window.Capacitor?.Plugins?.App){
+      window.Capacitor.Plugins.App.addListener('appStateChange',({isActive})=>{
+        if(!isActive)_onAppBackground();
+        else _onAppForeground();
+      });
+    }else{
+      // Retry a few times in case Capacitor loads after page
+      setTimeout(tryCapacitor,1000);
+    }
+  };
+  setTimeout(tryCapacitor,500);
+})();
 
 document.getElementById('remoteVideo').addEventListener('leavepictureinpicture',()=>{if(currentCall){hidePip();openModal();}});
 
 function minimiseToPip(){
-  const rv=document.getElementById('remoteVideo');
-  if(document.pictureInPictureElement){document.exitPictureInPicture().then(()=>openModal()).catch(()=>openModal());return;}
-  if(document.pictureInPictureEnabled&&rv.readyState>=2){
-    rv.requestPictureInPicture().then(()=>hideModal()).catch(()=>{hideModal();if(currentCall)showPip();});
-  }else{hideModal();if(currentCall)showPip();}
+  // On Android Capacitor, native PiP needs manifest permission — use custom overlay always
+  hideModal();
+  if(currentCall)showPip();
 }
 
 function rejoinCall(){if(!currentCall)return;document.getElementById('joinBanner').classList.remove('show');hidePip();openModal();}
