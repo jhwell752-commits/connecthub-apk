@@ -21,13 +21,11 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # ── Install Capacitor CLI + Android platform ──
       - name: Install dependencies
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      # ── Write capacitor.config.json ──
       - name: Write Capacitor config
         run: |
           cat > capacitor.config.json << 'EOF'
@@ -51,19 +49,22 @@ jobs:
           }
           EOF
 
-      # ── Put your index.html into the www folder ──
       - name: Prepare web assets
         run: |
           mkdir -p www
           cp index.html www/index.html
 
-      # ── Init and add Android platform ──
       - name: Add Android platform
         run: |
           npx cap init "ConnectHub" "com.connecthub.app" --web-dir www
           npx cap add android
 
-      # ── Patch AndroidManifest for PiP + camera + mic + background ──
+      # ── KEY FIX: Upgrade Gradle to 8.7 — fixes ASM crash on bcprov-1.79 Java 21 bytecode ──
+      - name: Upgrade Gradle wrapper to 8.7
+        run: |
+          sed -i 's|gradle-[0-9.]*-all|gradle-8.7-all|g' android/gradle/wrapper/gradle-wrapper.properties
+          grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Patch AndroidManifest
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
@@ -75,24 +76,15 @@ jobs:
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
               <uses-permission android:name="android.permission.WAKE_LOCK" />' $MANIFEST
 
-      # ── Patch build.gradle to target SDK 34 ──
       - name: Patch build.gradle
         run: |
           sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
           sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
           sed -i 's/minSdkVersion .*/minSdkVersion 23/' android/app/build.gradle
 
-      # ── Sync web assets into Android project ──
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # ── Fix: clear corrupted Gradle jar cache (bcprov issue) ──
-      - name: Clear Gradle jar cache
-        run: |
-          rm -rf ~/.gradle/caches/jars-9
-          rm -rf ~/.gradle/caches/modules-2/files-2.1/org.bouncycastle
-
-      # ── Generate signing keystore ──
       - name: Generate keystore
         run: |
           keytool -genkeypair \
@@ -106,7 +98,6 @@ jobs:
             -dname "CN=ConnectHub, OU=Dev, O=ConnectHub, L=Unknown, ST=Unknown, C=US" \
             -noprompt
 
-      # ── Write signing config into gradle ──
       - name: Configure signing
         run: |
           cp connecthub.keystore android/app/connecthub.keystore
@@ -129,14 +120,10 @@ jobs:
           }
           EOF
 
-      # ── Build the APK ──
       - name: Build APK
         working-directory: android
-        run: |
-          ./gradlew --stop || true
-          ./gradlew assembleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
-      # ── Upload APK artifact ──
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
