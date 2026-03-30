@@ -12,7 +12,6 @@ jobs:
         with:
           node-version: '18'
 
-      # ── JDK 21 required by Capacitor 6 ──
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -120,11 +119,15 @@ jobs:
           </manifest>
           EOF
 
+      # ── SDK 35 required for VANILLA_ICE_CREAM constant in latest Capacitor ──
       - name: Patch build.gradle
         run: |
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
-          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 35/' android/app/build.gradle
           sed -i 's/minSdkVersion .*/minSdkVersion 23/' android/app/build.gradle
+          # Also patch capacitor-android's own build.gradle
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' node_modules/@capacitor/android/capacitor/build.gradle 2>/dev/null || true
+          sed -i 's/compileSdk .*/compileSdk 35/' node_modules/@capacitor/android/capacitor/build.gradle 2>/dev/null || true
 
       - name: Sync Capacitor
         run: npx cap sync android
