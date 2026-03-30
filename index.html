@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>ConnectHub</title>
 <meta name="theme-color" content="#0a0a0a">
 <link rel="manifest" href="/manifest.json">
@@ -17,7 +17,9 @@
 <style>
 /* ══ BASE ══ */
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:100vh;color:#1a1a1a;}
+html,body{height:100%;height:-webkit-fill-available;overflow:hidden;background:#fff;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;color:#1a1a1a;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+@media all and (display-mode:standalone){body{padding-top:env(safe-area-inset-top,20px);}}
 
 /* ══ AUTH ══ */
 #authCard{background:#fff;border:none;box-shadow:0 2px 24px rgba(0,0,0,.10);}
@@ -59,8 +61,8 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FFFC00,#FFD700);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0;cursor:pointer;}
 
 /* ══ MAIN LAYOUT ══ */
-#mainApp{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-.app-body{display:flex;flex:1;overflow:hidden;}
+#mainApp{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
+.app-body{display:flex;flex:1;overflow:hidden;min-height:0;}
 
 /* ══ LEFT SIDEBAR ══ */
 .sidebar{
@@ -246,8 +248,9 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 .call-top-bar{position:absolute;top:0;left:0;right:0;z-index:10;padding:.75rem 1.25rem;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to bottom,rgba(0,0,0,.75) 0%,transparent 100%);}
 .vid-wrap{flex:1;position:relative;overflow:hidden;background:#050510;}
 #remoteVideo{width:100%;height:100%;object-fit:cover;display:block;background:#050510;}
-#localVideo{position:absolute;bottom:100px;right:16px;width:100px;height:140px;border-radius:1rem;border:2px solid #FFFC00;object-fit:cover;background:#050510;transition:opacity .3s;z-index:5;cursor:grab;touch-action:none;user-select:none;transform:scaleX(-1);}
+#localVideo{position:absolute;bottom:100px;right:16px;width:100px;height:140px;border-radius:1rem;border:2px solid #FFFC00;object-fit:cover;background:#050510;transition:all .25s ease;z-index:5;cursor:pointer;touch-action:none;user-select:none;transform:scaleX(-1);}
 #localVideo.cam-off{opacity:0;}
+#localVideo.is-remote{transform:none;}/* when swapped to big, remote goes small */
 .call-controls{position:absolute;bottom:0;left:0;right:0;z-index:10;display:flex;gap:.75rem;justify-content:center;padding:1rem 1rem 1.5rem;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 100%);flex-wrap:wrap;}
 .ctrl-btn{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;transition:transform .15s,background .2s;color:#fff;}
 .ctrl-btn:hover{transform:scale(1.08);}
@@ -259,16 +262,98 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 @keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.6);}50%{box-shadow:0 0 0 8px rgba(239,68,68,0);}}
 
 /* ══ PiP ══ */
-#pipOverlay{display:none;position:fixed;top:16px;right:16px;z-index:99999;width:200px;border-radius:1rem;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4);background:#111;border:2px solid #FFFC00;cursor:grab;user-select:none;}
-#pipOverlay:active{cursor:grabbing;}
-#pipOverlay.show{display:block;}
-#pipRemoteThumb{width:100%;height:128px;object-fit:cover;display:block;background:#050510;}
-#pipLocalThumb{position:absolute;top:6px;right:6px;width:52px;height:40px;border-radius:.4rem;object-fit:cover;background:#050510;border:1px solid #FFFC00;transform:scaleX(-1);}
-.pip-bar{background:rgba(0,0,0,0.8);padding:6px 10px;display:flex;justify-content:space-between;align-items:center;}
-.pip-name{font-size:.7rem;font-weight:700;color:#FFFC00;}
-.pip-timer{font-size:.7rem;color:rgba(255,255,255,0.6);font-family:monospace;}
-.pip-end{background:#ff4d4d;border:none;border-radius:999px;color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;cursor:pointer;}
-.pip-expand{background:rgba(255,255,255,0.15);border:none;border-radius:999px;color:#fff;font-size:.65rem;padding:2px 6px;cursor:pointer;margin-right:4px;}
+#pipOverlay{
+  display:none;
+  position:fixed;
+  top:16px;right:16px;
+  z-index:2147483646;
+  width:180px;
+  border-radius:1rem;
+  overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.7);
+  background:#111;
+  border:2px solid #FFFC00;
+  user-select:none;
+  -webkit-user-select:none;
+  will-change:transform;
+  /* GPU layer so it stays visible above everything */
+  -webkit-transform:translateZ(0);
+  transform:translateZ(0);
+  touch-action:none; /* prevent scroll interference on mobile */
+}
+#pipOverlay.pip-visible{display:block!important;}
+#pipOverlay.pip-dragging{cursor:grabbing;opacity:.92;}
+#pipVideoWrap{position:relative;width:100%;height:120px;background:#050510;overflow:hidden;}
+#pipRemoteThumb{
+  width:100%;height:100%;object-fit:cover;display:block;
+  background:#050510;
+  /* CRITICAL on iOS: playsinline already set, but also need these */
+  -webkit-playsinline:1;
+}
+#pipLocalThumb{
+  position:absolute;bottom:5px;right:5px;
+  width:46px;height:36px;
+  border-radius:.35rem;object-fit:cover;
+  background:#050510;
+  border:1.5px solid #FFFC00;
+  transform:scaleX(-1);
+}
+/* Drag handle hint */
+#pipDragHandle{
+  position:absolute;top:5px;left:50%;transform:translateX(-50%);
+  width:32px;height:3px;border-radius:999px;
+  background:rgba(255,255,255,0.35);
+  pointer-events:none;
+}
+.pip-bar{
+  background:rgba(0,0,0,0.9);
+  padding:5px 8px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:4px;
+}
+.pip-name{font-size:.68rem;font-weight:700;color:#FFFC00;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pip-timer{font-size:.65rem;color:rgba(255,255,255,0.6);font-family:monospace;flex-shrink:0;}
+/* "X" dismiss button — hides PiP widget but call stays alive */
+.pip-dismiss{
+  background:rgba(255,255,255,0.15);border:none;border-radius:50%;
+  color:rgba(255,255,255,0.7);font-size:.7rem;
+  width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;margin-left:2px;
+  line-height:1;
+}
+.pip-dismiss:hover{background:rgba(255,255,255,0.3);}
+.pip-expand{
+  background:rgba(255,252,0,0.2);border:none;border-radius:999px;
+  color:#FFFC00;font-size:.62rem;padding:2px 7px;cursor:pointer;flex-shrink:0;
+  font-weight:700;
+}
+.pip-expand:hover{background:rgba(255,252,0,0.35);}
+.pip-end{
+  background:#ff4d4d;border:none;border-radius:999px;
+  color:#fff;font-size:.62rem;font-weight:700;
+  padding:2px 7px;cursor:pointer;flex-shrink:0;
+}
+.pip-end:hover{background:#e03333;}
+/* Collapsed badge — tiny green dot shown when user dismisses PiP widget */
+#pipCollapsedBadge{
+  display:none;
+  position:fixed;bottom:80px;right:12px;
+  z-index:2147483647;
+  background:#00c853;
+  color:#fff;font-size:.68rem;font-weight:700;
+  padding:5px 10px;border-radius:999px;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+  cursor:pointer;
+  align-items:center;gap:5px;
+  border:none;
+  white-space:nowrap;
+  animation:pipBadgePulse 2s ease-in-out infinite;
+}
+#pipCollapsedBadge.badge-visible{display:flex!important;}
+@keyframes pipBadgePulse{
+  0%,100%{box-shadow:0 4px 16px rgba(0,200,83,.4),0 0 0 0 rgba(0,200,83,.4);}
+  50%{box-shadow:0 4px 16px rgba(0,200,83,.4),0 0 0 6px rgba(0,200,83,0);}
+}
 
 /* ══ SNAP CAMERA ══ */
 #snapModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.96);flex-direction:column;align-items:center;justify-content:center;gap:1rem;}
@@ -329,12 +414,25 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 #videoModal .call-controls.hidden{opacity:0;visibility:hidden;}
 #videoModal .call-top-bar{transition:opacity .4s,visibility .4s;}
 #videoModal .call-top-bar.hidden{opacity:0;visibility:hidden;}
+
+/* ══ TYPING INDICATOR ══ */
+.typing-indicator{display:none;align-items:center;gap:4px;padding:.3rem .75rem;margin-bottom:.25rem;}
+.typing-indicator.show{display:flex;}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:#ccc;animation:typingBounce 1.2s infinite;}
+.typing-dot:nth-child(2){animation-delay:.2s;}
+.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
+
+/* ══ ACTIVE CALL JOIN BUTTON ══ */
+.join-call-banner{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#00c853,#00a846);color:#fff;padding:10px 22px;border-radius:999px;z-index:9999;display:none;align-items:center;gap:10px;font-size:.85rem;font-weight:700;box-shadow:0 4px 20px rgba(0,200,83,.4);cursor:pointer;white-space:nowrap;animation:joinPulse 2s infinite;}
+.join-call-banner.show{display:flex;}
+@keyframes joinPulse{0%,100%{box-shadow:0 4px 20px rgba(0,200,83,.4);}50%{box-shadow:0 4px 32px rgba(0,200,83,.7);}}
 </style>
 </head>
 <body>
 
 <!-- ══ STORIES MODAL ══ -->
-<div id="storiesModal">
+<div id="storiesModal" style="display:none;position:fixed;inset:0;z-index:19000;background:#000;flex-direction:column;">
   <div class="story-view">
     <div class="story-progress-bar" id="storyProgressBar"></div>
     <div class="story-header">
@@ -361,22 +459,29 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 </div>
 
 <!-- ══ BITMOJI MODAL ══ -->
-<div id="bitmojiModal">
+<div id="bitmojiModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:18000;align-items:center;justify-content:center;">
   <div class="bitmoji-card">
     <h2>🎭 My Bitmoji</h2>
-    <div class="bitmoji-preview" id="bitmojiPreview" onclick="document.getElementById('bitmojiModal').classList.remove('open')">👻</div>
+    <div class="bitmoji-preview" id="bitmojiPreview" onclick="document.getElementById('bitmojiModal').style.display='none'">👻</div>
     <p style="text-align:center;font-size:.75rem;color:#aaa;margin-bottom:.75rem;">Tap to pick your avatar</p>
     <div class="bitmoji-grid" id="bitmojiGrid"></div>
-    <button onclick="document.getElementById('bitmojiModal').classList.remove('open')" style="width:100%;margin-top:1rem;background:#f5f5f5;border:none;border-radius:12px;padding:.65rem;font-weight:700;cursor:pointer;font-size:.9rem;">Done</button>
+    <button onclick="document.getElementById('bitmojiModal').style.display='none'" style="width:100%;margin-top:1rem;background:#f5f5f5;border:none;border-radius:12px;padding:.65rem;font-weight:700;cursor:pointer;font-size:.9rem;">Done</button>
   </div>
 </div>
 
 <!-- ══ SNAP VIEW MODAL ══ -->
-<div id="snapViewModal">
+<div id="snapViewModal" style="display:none;position:fixed;inset:0;background:#000;z-index:20000;flex-direction:column;align-items:center;justify-content:center;">
   <button class="snap-view-close" onclick="closeSnapView()"><i class="fas fa-times"></i></button>
   <span class="snap-view-timer" id="snapViewTimer"></span>
   <img id="snapViewImg" class="snap-view-img" src="" alt="Snap">
   <p style="color:rgba(255,255,255,.5);font-size:.75rem;margin-top:.75rem;">Hold to keep open · Release to close</p>
+</div>
+
+<!-- ══ JOIN ACTIVE CALL BANNER ══ -->
+<div class="join-call-banner" id="joinCallBanner" onclick="rejoinCall()">
+  <i class="fas fa-phone-alt"></i>
+  <span id="joinCallName">Call in progress</span>
+  <span style="background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:999px;font-size:.75rem;">Tap to rejoin</span>
 </div>
 
 <!-- ══ INCOMING CALL BANNER ══ -->
@@ -392,19 +497,28 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
   <button id="declineBtn" class="btn-red" style="border-radius:999px;padding:6px 16px;font-size:.8rem;font-weight:700;">Decline</button>
 </div>
 
-<!-- ══ PiP OVERLAY ══ -->
+<!-- ══ PiP OVERLAY (draggable, dismissable — call stays alive when dismissed) ══ -->
 <div id="pipOverlay">
-  <div style="position:relative;">
+  <div id="pipVideoWrap">
     <video id="pipRemoteThumb" autoplay playsinline muted></video>
     <video id="pipLocalThumb" autoplay muted playsinline></video>
+    <div id="pipDragHandle"></div>
   </div>
   <div class="pip-bar">
     <span class="pip-name" id="pipName">Call</span>
     <span class="pip-timer" id="pipTimer">0:00</span>
-    <button class="pip-expand" id="pipExpandBtn" title="Expand"><i class="fas fa-expand-alt"></i></button>
+    <button class="pip-expand" id="pipExpandBtn" title="Expand to full screen">⤢</button>
     <button class="pip-end" id="pipEndBtn">End</button>
+    <button class="pip-dismiss" id="pipDismissBtn" title="Hide widget (call stays on)">✕</button>
   </div>
 </div>
+
+<!-- ══ PiP COLLAPSED BADGE (shown after dismiss — tap to re-show widget) ══ -->
+<button id="pipCollapsedBadge" onclick="expandPipBadge()">
+  <i class="fas fa-phone-alt"></i>
+  <span id="pipBadgeName">Call</span>
+  <span id="pipBadgeTimer">0:00</span>
+</button>
 
 <!-- ══ VIDEO CALL MODAL — FULLSCREEN ══ -->
 <div id="videoModal">
@@ -671,6 +785,14 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
       <!-- Group messages (shared area) -->
       <div id="groupMessages" style="display:none;flex:1;overflow-y:auto;padding:1rem;flex-direction:column;gap:.4rem;background:#fff;"></div>
 
+      <!-- Typing indicator -->
+      <div class="typing-indicator" id="typingIndicator">
+        <div style="width:28px;height:28px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:.8rem;" id="typingAvatar">?</div>
+        <div style="background:#f5f5f5;border-radius:1rem;padding:.4rem .65rem;display:flex;gap:4px;align-items:center;">
+          <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+        </div>
+      </div>
+
       <!-- Chat input bar -->
       <div class="chat-input-bar" id="chatInputBar" style="display:none;">
         <button class="input-icon-btn" id="openSnapCamBtn" title="Take a snap" onclick="openSnapCamera()"><i class="fas fa-camera"></i></button>
@@ -737,6 +859,7 @@ let _streaks={}; // {friendId: {count,lastDate}}
 let _wakeLock=null;
 let _callControlsTimeout=null;
 let _snapViewTimeout=null;
+let _typingPollInterval=null;
 
 /* ── Utils ── */
 function esc(s){return s?String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])):''}
@@ -970,22 +1093,40 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 /* ── PEER SETUP ── */
+let _peerReady=false;
 function initPeer(){
-  if(peer)peer.destroy();
-  peer=new Peer('ch_'+me.username,{debug:0});
+  if(peer){try{peer.destroy();}catch(e){}}
+  _peerReady=false;
+  peer=new Peer('ch_'+me.username,{debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
   peer.on('open',async id=>{
+    _peerReady=true;
     await sb.from('users').update({peer_id:id}).eq('id',me.id);
     me.peer_id=id;
   });
   peer.on('call',call=>{
+    // If already in a call, auto-decline and let banner show
+    if(currentCall){
+      call.close();
+      return;
+    }
     incomingCall=call;
     const caller=call.peer.replace('ch_','');
     const isVid=call.metadata?.type!=='audio';
     document.getElementById('callerLabel').textContent=caller;
     document.getElementById('callTypeLabel').textContent=isVid?'📹 Video call incoming…':'📞 Audio call incoming…';
     document.getElementById('incomingBar').classList.add('show');
+    // Push notification for incoming call
+    _sendNotification(caller, isVid?'📹 Incoming video call':'📞 Incoming audio call');
   });
-  peer.on('error',e=>console.warn('Peer:',e.type));
+  peer.on('error',e=>{
+    console.warn('Peer error:',e.type);
+    // If peer is destroyed/disconnected, reinit after a delay
+    if(e.type==='peer-unavailable')return;
+    setTimeout(()=>{if(me&&!currentCall)initPeer();},3000);
+  });
+  peer.on('disconnected',()=>{
+    if(me&&!currentCall)setTimeout(()=>{try{peer.reconnect();}catch(e){initPeer();}},2000);
+  });
 }
 
 /* ── CALL CONTROLS ── */
@@ -1025,7 +1166,7 @@ async function toggleCam(){
           else{pc.addTrack(newVidTrack,localStream);}
         }
         document.getElementById('localVideo').srcObject=localStream;
-        document.getElementById('pipLocalThumb').srcObject=localStream;
+        _attachPipStreams();
       }catch(e){
         isCamOn=false;
         document.getElementById('camBtn').className='ctrl-btn off';
@@ -1066,7 +1207,7 @@ async function flipCallCamera(){
       localStream=newStream;
     }
     document.getElementById('localVideo').srcObject=localStream;
-    document.getElementById('pipLocalThumb').srcObject=localStream;
+    _attachPipStreams();
   }catch(e){toast('Camera flip error: '+e.message);}
 }
 
@@ -1103,10 +1244,7 @@ async function toggleScreenShare(){
       document.getElementById('localVideo').srcObject=localStream;
       // Restore localVideo mirror (camera should be mirrored, not screen)
       document.getElementById('localVideo').style.transform='scaleX(-1)';
-      document.getElementById('pipLocalThumb').srcObject=localStream;
-      // Restore PiP to show remote video (not screen)
-      const remoteVid=document.getElementById('remoteVideo');
-      document.getElementById('pipRemoteThumb').srcObject=remoteVid.srcObject;
+      _attachPipStreams(); // re-sync PiP to correct local+remote streams
     }catch(e){console.warn('Screen share restore error:',e);}
     document.getElementById('shareScreenBtn').className='ctrl-btn off';
     document.getElementById('shareScreenIcon').className='fas fa-desktop';
@@ -1128,21 +1266,11 @@ async function toggleScreenShare(){
     const screenAudTrack=_screenShareStream.getAudioTracks()[0];
     const pc=currentCall.peerConnection;
     try{
-      // Replace or add video track
       const vidSender=pc?.getSenders().find(s=>s.track&&s.track.kind==='video');
       if(vidSender){
         await vidSender.replaceTrack(screenVidTrack);
       }else if(pc){
-        // Audio call — add video track so remote can see the screen
         pc.addTrack(screenVidTrack,_screenShareStream);
-      }
-      // Optionally also send system audio
-      if(screenAudTrack&&pc){
-        const audSender=pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
-        if(audSender){
-          // Mix system audio: keep mic too by not replacing, or replace if no mic
-          // We'll replace — user can unmute mic separately
-        }
       }
     }catch(e){
       toast('Screen share routing error: '+e.message);
@@ -1150,29 +1278,33 @@ async function toggleScreenShare(){
       _screenShareStream=null;
       return;
     }
-    // Show screen in local preview — remove mirror flip (screens shouldn't be mirrored)
+    // Show screen in local preview (no mirror — screens aren't mirrored)
     document.getElementById('localVideo').style.transform='none';
     document.getElementById('localVideo').srcObject=_screenShareStream;
     document.getElementById('localVideo').classList.remove('cam-off');
-    // Show screen in PiP remote thumb so it's prominent when you leave the app
-    document.getElementById('pipRemoteThumb').srcObject=_screenShareStream;
-    document.getElementById('pipLocalThumb').srcObject=document.getElementById('remoteVideo').srcObject;
+    // PiP: show screen in remote thumb (prominent), webcam in local thumb
+    const remThumb=document.getElementById('pipRemoteThumb');
+    const locThumb=document.getElementById('pipLocalThumb');
+    remThumb.srcObject=_screenShareStream;
+    locThumb.srcObject=localStream; // original cam stream
     _isScreenSharing=true;
     document.getElementById('shareScreenBtn').className='ctrl-btn on';
     document.getElementById('shareScreenIcon').className='fas fa-desktop';
     document.getElementById('callTypeDisplay').textContent='🖥️ Sharing Screen';
-    // Auto-stop when user ends screen share via browser UI
     screenVidTrack.onended=()=>{
       if(_isScreenSharing)toggleScreenShare();
     };
   }
 }
 
-/* ── DRAGGABLE LOCAL VIDEO + SWAP ON TAP ── */
+/* ── DRAGGABLE LOCAL VIDEO + SWAP ON TAP — NO ECHO ── */
+// We track which element currently holds local vs remote
+let _localIsSmall = true; // true = localVideo element shows local cam (pip), false = swapped
 (()=>{
   const lv=document.getElementById('localVideo');
   const rv=document.getElementById('remoteVideo');
   let ldx=0,ldy=0,lDragging=false,lMoved=false,lStartX=0,lStartY=0;
+
   function lvPointerDown(e){
     const t=e.touches?e.touches[0]:e;
     lStartX=t.clientX;lStartY=t.clientY;lMoved=false;lDragging=true;
@@ -1192,12 +1324,7 @@ async function toggleScreenShare(){
   }
   function lvPointerUp(){
     if(!lDragging)return;lDragging=false;
-    if(!lMoved){
-      // Swap local <-> remote video positions (Snapchat style)
-      const tmpSrc=lv.srcObject;lv.srcObject=rv.srcObject;rv.srcObject=tmpSrc;
-      const tmpTransform=lv.style.transform;
-      lv.style.transform=rv.style.transform||'';rv.style.transform=tmpTransform;
-    }
+    if(!lMoved) _swapCallVideos();
   }
   lv.addEventListener('mousedown',lvPointerDown);
   lv.addEventListener('touchstart',lvPointerDown,{passive:true});
@@ -1206,6 +1333,41 @@ async function toggleScreenShare(){
   document.addEventListener('mouseup',lvPointerUp);
   document.addEventListener('touchend',lvPointerUp);
 })();
+
+function _swapCallVideos(){
+  const lv=document.getElementById('localVideo');
+  const rv=document.getElementById('remoteVideo');
+  if(!localStream)return; // no active call
+
+  _localIsSmall=!_localIsSmall;
+
+  if(_localIsSmall){
+    // Restore: local goes back to pip (localVideo element = muted = no echo)
+    lv.srcObject=localStream;
+    lv.muted=true;
+    rv.srcObject=_remoteStream;
+    rv.muted=false;
+    lv.style.transform='scaleX(-1)'; // mirror own camera
+    rv.style.transform='';
+    // Restore PiP thumbnails to correct streams
+    document.getElementById('pipLocalThumb').srcObject=localStream;
+    document.getElementById('pipRemoteThumb').srcObject=_remoteStream;
+  }else{
+    // Swap: local goes big (into remoteVideo element — but keep it MUTED to prevent echo)
+    rv.srcObject=localStream;
+    rv.muted=true; // CRITICAL — prevents hearing yourself
+    lv.srcObject=_remoteStream;
+    lv.muted=false; // remote audio through small pip is fine
+    rv.style.transform='scaleX(-1)'; // mirror big view of self
+    lv.style.transform=''; // remote doesn't need mirror
+    // Update PiP thumbnails to reflect swapped state
+    document.getElementById('pipLocalThumb').srcObject=localStream;
+    document.getElementById('pipRemoteThumb').srcObject=_remoteStream;
+  }
+}
+
+// Store remote stream globally so swap can reference it
+let _remoteStream=null;
 
 /* ── CALL CONTROLS AUTO-HIDE (show 5s then hide, tap bottom to show again) ── */
 function _resetCallControlsTimer(){
@@ -1222,10 +1384,10 @@ document.getElementById('videoModal').addEventListener('click',e=>{
 });
 document.getElementById('videoModal').addEventListener('touchstart',()=>{_resetCallControlsTimer();},{passive:true});
 // Show controls when modal opens
-const _origOpenModal=window.openModal;
 function openModal(){
   document.getElementById('videoModal').style.display='flex';
   hidePip();
+  _reattachMainStreams();
   _resetCallControlsTimer();
 }
 
@@ -1251,9 +1413,13 @@ async function _getCallStream(type){
 
 async function startCall(type='video'){
   if(!friendId||!peer)return;
+  // If already in a call, just show the modal
+  if(currentCall){openModal();return;}
   isVideoCall=(type==='video');
   isMicOn=true;isCamOn=isVideoCall;
   _callFacingMode='user';
+  _localIsSmall=true;
+  _remoteStream=null;
   let stream;
   try{
     stream=await _getCallStream(type);
@@ -1267,19 +1433,31 @@ async function startCall(type='video'){
     return toast('Friend is not online right now');
   }
   localStream=stream;
-  document.getElementById('localVideo').srcObject=stream;
-  document.getElementById('pipLocalThumb').srcObject=stream;
+  const lv=document.getElementById('localVideo');
+  const rv=document.getElementById('remoteVideo');
+  lv.srcObject=stream;
+  lv.muted=true; // ALWAYS muted — prevents echo
+  lv.style.transform='scaleX(-1)';
+  rv.style.transform='';
+  rv.muted=false;
   setCallUI(data.username,type);
   openModal();
-  const call=peer.call(data.peer_id,stream,{metadata:{type}});
+  const call=peer.call(data.peer_id,stream,{metadata:{type,callerName:me.display_name||me.username}});
   call.on('stream',rs=>{
-    document.getElementById('remoteVideo').srcObject=rs;
-    document.getElementById('pipRemoteThumb').srcObject=rs;
+    _remoteStream=rs;
+    rv.srcObject=rs;
+    rv.muted=false;
+    _attachPipStreams(); // keep PiP in sync
     document.getElementById('callStatus').textContent='Connected ✓';
     startCallTimer();
+    _showJoinCallBanner(false);
   });
   call.on('close',()=>endCall(true));
   currentCall=call;
+  _updateCallButtons();
+  _attachPipStreams(); // attach local stream to PiP immediately
+  // Send a message so friend knows they're being called (for notification)
+  _notifyCallSignal(friendId,'calling',type);
 }
 
 /* ── ACCEPT INCOMING ── */
@@ -1290,10 +1468,11 @@ document.getElementById('acceptBtn').onclick=async()=>{
   const type=call.metadata?.type||'video';
   isVideoCall=(type!=='audio');
   isMicOn=true;isCamOn=isVideoCall;
+  _localIsSmall=true;
+  _remoteStream=null;
   setCallUI(call.peer.replace('ch_',''),type);
   openModal();
 
-  // Get real media stream FIRST, then answer — ensures audio+video sent immediately
   let stream;
   try{
     stream=await _getCallStream(type);
@@ -1305,20 +1484,29 @@ document.getElementById('acceptBtn').onclick=async()=>{
   }
 
   localStream=stream;
-  document.getElementById('localVideo').srcObject=stream;
-  document.getElementById('pipLocalThumb').srcObject=stream;
+  const lv=document.getElementById('localVideo');
+  const rv=document.getElementById('remoteVideo');
+  lv.srcObject=stream;
+  lv.muted=true; // ALWAYS muted — prevents echo
+  lv.style.transform='scaleX(-1)';
+  rv.style.transform='';
+  rv.muted=false;
 
-  // Answer with real stream so remote peer receives audio + video from the start
   call.answer(stream);
 
   call.on('stream',rs=>{
-    document.getElementById('remoteVideo').srcObject=rs;
-    document.getElementById('pipRemoteThumb').srcObject=rs;
+    _remoteStream=rs;
+    rv.srcObject=rs;
+    rv.muted=false;
+    _attachPipStreams();
     document.getElementById('callStatus').textContent='Connected ✓';
     startCallTimer();
+    _showJoinCallBanner(false);
   });
   call.on('close',()=>endCall(true));
   currentCall=call;
+  _updateCallButtons();
+  _attachPipStreams(); // local stream available immediately
 };
 document.getElementById('declineBtn').onclick=()=>{
   document.getElementById('incomingBar').classList.remove('show');
@@ -1353,6 +1541,9 @@ function startCallTimer(){
     const fmt=fmtCallTimer(sec);
     document.getElementById('callTimerDisplay').textContent=fmt;
     document.getElementById('pipTimer').textContent=fmt;
+    // Keep badge timer in sync if badge is visible
+    const badgeTimer=document.getElementById('pipBadgeTimer');
+    if(badgeTimer)badgeTimer.textContent=fmt;
   },1000);
 }
 
@@ -1362,18 +1553,36 @@ async function endCall(fromRemote=false){
   clearInterval(callTimerInterval);callStartTime=null;
   if(currentCall&&!fromRemote)currentCall.close();
   currentCall=null;
+  _remoteStream=null;
+  _localIsSmall=true;
+  _updateCallButtons();
   if(_screenShareStream){_screenShareStream.getTracks().forEach(t=>t.stop());_screenShareStream=null;}
   _isScreenSharing=false;
   if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null;}
-  document.getElementById('localVideo').srcObject=null;
-  document.getElementById('localVideo').style.transform='scaleX(-1)'; // restore mirror
-  document.getElementById('remoteVideo').srcObject=null;
+  const lv=document.getElementById('localVideo');
+  const rv=document.getElementById('remoteVideo');
+  lv.srcObject=null;lv.muted=true;lv.style.transform='scaleX(-1)';
+  rv.srcObject=null;rv.muted=false;rv.style.transform='';
   document.getElementById('pipRemoteThumb').srcObject=null;
   document.getElementById('pipLocalThumb').srcObject=null;
   document.getElementById('shareScreenBtn').className='ctrl-btn off';
   document.getElementById('shareScreenIcon').className='fas fa-desktop';
   if(_isRecording)_stopRecording();
-  hideModal();hidePip();
+  hideModal();
+  hidePip();
+  // Also clear badge if call ended while widget was dismissed
+  _pipBadgeEl.classList.remove('badge-visible');
+  _pipX=null;_pipY=null; // reset position for next call
+  _showJoinCallBanner(false);
+  // Clear typing
+  _lastTypingState=true; // force _setTyping(false) to actually send
+  _setTyping(false);
+  clearTimeout(_typingTimeout);
+  clearInterval(_typingPollInterval);
+  _typingPollInterval=null;
+
+  // Reinit peer so new incoming calls work again
+  setTimeout(()=>{if(me)initPeer();},500);
 
   if(friendId&&me&&sec>0){
     const label=isVideoCall?'📹 Video call':'📞 Audio call';
@@ -1384,6 +1593,8 @@ async function endCall(fromRemote=false){
     }]);
     await loadMessages();
   }
+  // Restart typing poll (was cleared during call)
+  if(!_typingPollInterval)_typingPollInterval=setInterval(()=>_pollTyping(),1500);
 }
 window.endCall=endCall;
 
@@ -1479,114 +1690,268 @@ function _showRecordingReplay(url,fname){
 }
 
 document.getElementById('pipEndBtn').onclick=()=>endCall(false);
-document.getElementById('pipExpandBtn').onclick=()=>{hidePip();openModal();};
+document.getElementById('pipExpandBtn').onclick=()=>{_hidePipWidget();openModal();};
 
-/* ── MODAL / PiP ── */
-function openModal(){
-  document.getElementById('videoModal').style.display='flex';
+/* ══════════════════════════════════════════════
+   PiP SYSTEM — complete rewrite
+   
+   States:
+     "modal"    — full-screen call modal open
+     "pip"      — small widget visible (top-right, draggable)
+     "badge"    — widget dismissed, tiny pill badge shown
+     "hidden"   — no UI (call still live on audio)
+   
+   Call always keeps running regardless of UI state.
+════════════════════════════════════════════════ */
+
+let _pipX=null,_pipY=null; // persisted position across show/hide
+let _pipDragging=false,_pipDragStartX=0,_pipDragStartY=0,_pipOffX=0,_pipOffY=0,_pipMoved=false;
+
+const _pipEl=document.getElementById('pipOverlay');
+const _pipBadgeEl=document.getElementById('pipCollapsedBadge');
+
+/* ── Position helpers ── */
+function _setPipPosition(x,y){
+  const w=_pipEl.offsetWidth||180,h=_pipEl.offsetHeight||160;
+  x=Math.max(8,Math.min(window.innerWidth-w-8,x));
+  y=Math.max(8,Math.min(window.innerHeight-h-8,y));
+  _pipEl.style.left=x+'px';
+  _pipEl.style.top=y+'px';
+  _pipEl.style.right='auto';
+  _pipEl.style.bottom='auto';
+  _pipX=x;_pipY=y;
+}
+function _resetPipPosition(){
+  // Default: top-right corner with safe margin
+  const w=_pipEl.offsetWidth||180;
+  _setPipPosition(window.innerWidth-w-16,16);
+}
+
+/* ── Show / hide the widget ── */
+function showPip(){
+  _pipEl.classList.add('pip-visible');
+  _pipBadgeEl.classList.remove('badge-visible');
+  // Restore or set default position
+  if(_pipX!==null&&_pipY!==null){
+    _setPipPosition(_pipX,_pipY);
+  }else{
+    // Let browser paint first so offsetWidth is correct
+    requestAnimationFrame(_resetPipPosition);
+  }
+  _attachPipStreams();
+}
+function hidePip(){
+  _pipEl.classList.remove('pip-visible');
+  _pipBadgeEl.classList.remove('badge-visible');
+}
+function _hidePipWidget(){
+  // Just hide; badge not shown (used when expanding to full modal)
   hidePip();
 }
+
+/* ── Dismiss: hide widget, show badge — call stays alive ── */
+document.getElementById('pipDismissBtn').onclick=(e)=>{
+  e.stopPropagation();
+  _pipEl.classList.remove('pip-visible');
+  if(currentCall){
+    _pipBadgeEl.classList.add('badge-visible');
+    _syncBadgeTimer();
+  }
+};
+
+/* ── Badge: tap to re-show PiP widget ── */
+function expandPipBadge(){
+  _pipBadgeEl.classList.remove('badge-visible');
+  showPip();
+}
+window.expandPipBadge=expandPipBadge;
+
+/* ── Sync badge name/timer ── */
+function _syncBadgeTimer(){
+  const nameEl=document.getElementById('pipBadgeName');
+  const timerEl=document.getElementById('pipBadgeTimer');
+  if(nameEl)nameEl.textContent=document.getElementById('pipName').textContent||'Call';
+  if(timerEl)timerEl.textContent=document.getElementById('pipTimer').textContent||'0:00';
+}
+
+/* ── Attach live streams to PiP video elements ── */
+function _attachPipStreams(){
+  const remThumb=document.getElementById('pipRemoteThumb');
+  const locThumb=document.getElementById('pipLocalThumb');
+  // Remote stream
+  if(_remoteStream&&remThumb.srcObject!==_remoteStream){
+    remThumb.srcObject=_remoteStream;
+    remThumb.muted=true; // PiP thumb is muted (audio plays through main remoteVideo)
+  }
+  // Local stream (always muted — never echo)
+  if(localStream&&locThumb.srcObject!==localStream){
+    locThumb.srcObject=localStream;
+    locThumb.muted=true;
+  }
+  // Attempt to play (browsers may pause on visibility change)
+  [remThumb,locThumb].forEach(v=>{
+    if(v.srcObject&&v.paused){
+      v.play().catch(()=>{});
+    }
+  });
+}
+
+/* ── DRAG implementation — pointer events for unified mouse+touch ── */
+_pipEl.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button'))return; // don't drag when hitting buttons
+  e.preventDefault();
+  _pipEl.setPointerCapture(e.pointerId);
+  _pipDragging=true;
+  _pipMoved=false;
+  _pipDragStartX=e.clientX;
+  _pipDragStartY=e.clientY;
+  const r=_pipEl.getBoundingClientRect();
+  _pipOffX=e.clientX-r.left;
+  _pipOffY=e.clientY-r.top;
+  _pipEl.classList.add('pip-dragging');
+});
+
+_pipEl.addEventListener('pointermove',e=>{
+  if(!_pipDragging)return;
+  e.preventDefault();
+  if(Math.abs(e.clientX-_pipDragStartX)>6||Math.abs(e.clientY-_pipDragStartY)>6)_pipMoved=true;
+  _setPipPosition(e.clientX-_pipOffX, e.clientY-_pipOffY);
+});
+
+_pipEl.addEventListener('pointerup',e=>{
+  if(!_pipDragging)return;
+  _pipDragging=false;
+  _pipEl.classList.remove('pip-dragging');
+  // If not moved = tap = expand to full modal
+  if(!_pipMoved){
+    _hidePipWidget();
+    openModal();
+  }
+});
+
+_pipEl.addEventListener('pointercancel',()=>{
+  _pipDragging=false;
+  _pipEl.classList.remove('pip-dragging');
+});
+
+/* Recalc position on window resize so PiP doesn't go off-screen */
+window.addEventListener('resize',()=>{
+  if(_pipEl.classList.contains('pip-visible')&&_pipX!==null){
+    _setPipPosition(_pipX,_pipY);
+  }
+});
+
+/* ── MODAL / PiP helpers ── */
 function hideModal(){
   document.getElementById('videoModal').style.display='none';
   document.getElementById('callTimerDisplay').textContent='0:00';
   document.getElementById('callStatus').textContent='Connecting…';
 }
-function showPip(){
-  document.getElementById('pipOverlay').classList.add('show');
-}
-function hidePip(){
-  document.getElementById('pipOverlay').classList.remove('show');
+function showPipAndHideModal(){
+  hideModal();
+  if(currentCall)showPip();
 }
 
 /*
- * minimiseToPip — triggered by user button press (has gesture, so native PiP works).
- * We always try native PiP first (requires user gesture), then fall back to custom overlay.
+ * minimiseToPip — triggered by user button press (needs gesture for native PiP).
+ * Always tries native browser PiP first; falls back to custom overlay.
  */
 function minimiseToPip(){
   const remoteVid=document.getElementById('remoteVideo');
-
   if(document.pictureInPictureElement){
-    // Already in native PiP — exit back to full modal
     document.exitPictureInPicture().then(()=>openModal()).catch(()=>openModal());
     return;
   }
-
-  if(document.pictureInPictureEnabled && remoteVid.readyState>=2){
+  if(document.pictureInPictureEnabled&&remoteVid.readyState>=2){
     remoteVid.requestPictureInPicture()
-      .then(()=>{ hideModal(); })
-      .catch(()=>{ _showCustomPip(); });
+      .then(()=>hideModal())
+      .catch(()=>showPipAndHideModal());
   }else{
-    _showCustomPip();
+    showPipAndHideModal();
   }
 }
 
-function _showCustomPip(){
-  hideModal();
-  if(currentCall) showPip();
-}
-
-/* ── PiP DRAG ── */
-const pip=document.getElementById('pipOverlay');
-pip.addEventListener('mousedown',e=>{
-  if(e.target.closest('button'))return;
-  pipDragging=true;
-  const r=pip.getBoundingClientRect();
-  pipDragOffX=e.clientX-r.left;pipDragOffY=e.clientY-r.top;
-  pip.style.cursor='grabbing';
-});
-pip.addEventListener('touchstart',e=>{
-  if(e.target.closest('button'))return;
-  pipDragging=true;
-  const r=pip.getBoundingClientRect();
-  pipDragOffX=e.touches[0].clientX-r.left;pipDragOffY=e.touches[0].clientY-r.top;
-},{passive:true});
-document.addEventListener('mousemove',e=>{
-  if(!pipDragging)return;
-  let x=e.clientX-pipDragOffX,y=e.clientY-pipDragOffY;
-  x=Math.max(0,Math.min(window.innerWidth-pip.offsetWidth,x));
-  y=Math.max(0,Math.min(window.innerHeight-pip.offsetHeight,y));
-  pip.style.right='auto';pip.style.bottom='auto';
-  pip.style.left=x+'px';pip.style.top=y+'px';
-});
-document.addEventListener('touchmove',e=>{
-  if(!pipDragging)return;
-  let x=e.touches[0].clientX-pipDragOffX,y=e.touches[0].clientY-pipDragOffY;
-  x=Math.max(0,Math.min(window.innerWidth-pip.offsetWidth,x));
-  y=Math.max(0,Math.min(window.innerHeight-pip.offsetHeight,y));
-  pip.style.right='auto';pip.style.bottom='auto';
-  pip.style.left=x+'px';pip.style.top=y+'px';
-},{passive:true});
-document.addEventListener('mouseup',()=>{pipDragging=false;pip.style.cursor='grab';});
-document.addEventListener('touchend',()=>{pipDragging=false;});
-
-/*
- * visibilitychange — when the app goes to the background.
- * Native PiP CANNOT be triggered here (no user gesture), so we always
- * use the custom PiP overlay which keeps the call UI visible within the
- * WebView / PWA while the audio continues playing.
- */
+/* ── visibilitychange — the key fix for "open TikTok" scenario ── */
 document.addEventListener('visibilitychange',()=>{
   if(!currentCall)return;
+
   if(document.hidden){
-    // App going to background — use custom PiP (native PiP needs user gesture)
+    /* ── App went to background ── */
     if(!document.pictureInPictureElement){
-      hideModal();
+      // Hide full modal (saves battery, avoids render issues)
+      document.getElementById('videoModal').style.display='none';
+      // Show our custom PiP overlay — it lives above everything including other PWA content
       showPip();
     }
+    // Do NOT stop any tracks — call audio/video keeps running in background
   }else{
-    // App returning to foreground
+    /* ── App came back to foreground ── */
     if(document.pictureInPictureElement){
       document.exitPictureInPicture().catch(()=>{});
     }
-    hidePip();
-    openModal();
+
+    // Re-attach streams to main video elements (iOS/Android may have detached them)
+    _reattachMainStreams();
+
+    // If user had dismissed the badge, just re-show the modal
+    _pipBadgeEl.classList.remove('badge-visible');
+
+    // If PiP is visible, hide it and go back to full modal
+    if(_pipEl.classList.contains('pip-visible')){
+      hidePip();
+      openModal();
+    }else{
+      // Was hidden (badge dismissed) — also restore modal
+      openModal();
+    }
   }
 });
 
-// When native PiP closed by user → restore full modal
+// When native PiP window closed by user → restore full modal
 document.getElementById('remoteVideo').addEventListener('leavepictureinpicture',()=>{
   if(currentCall){hidePip();openModal();}
 });
+
+/* Re-attach streams to main modal video elements after background */
+function _reattachMainStreams(){
+  try{
+    if(localStream){
+      const lv=document.getElementById('localVideo');
+      if(!lv.srcObject||lv.srcObject!==localStream){
+        lv.srcObject=localStream;lv.muted=true;
+      }
+      if(lv.paused)lv.play().catch(()=>{});
+    }
+    if(_remoteStream){
+      const rv=document.getElementById('remoteVideo');
+      if(!rv.srcObject||rv.srcObject!==_remoteStream){
+        rv.srcObject=_remoteStream;rv.muted=false;
+      }
+      if(rv.paused)rv.play().catch(()=>{});
+    }
+    // Also refresh PiP thumbs
+    _attachPipStreams();
+  }catch(e){}
+}
+
+/* ── JOIN CALL BANNER (when app backgrounded during call) ── */
+function _showJoinCallBanner(show){
+  const b=document.getElementById('joinCallBanner');
+  if(!b)return;
+  if(show&&currentCall){
+    document.getElementById('joinCallName').textContent=document.getElementById('callWithLabel').textContent||'Call';
+    b.classList.add('show');
+  }else{
+    b.classList.remove('show');
+  }
+}
+function rejoinCall(){
+  if(!currentCall)return;
+  _showJoinCallBanner(false);
+  hidePip();
+  openModal();
+}
+window.rejoinCall=rejoinCall;
 
 /* ── FRIEND REQUESTS ── */
 document.getElementById('sendReqBtn').onclick=async()=>{
@@ -1681,6 +2046,11 @@ async function loadFriendsList(){
   buildStoryRow();
 }
 window.selectFriend=function(fId,fName,fScore){
+  // Clear typing state from previous friend
+  _lastTypingState=false;
+  clearTimeout(_typingTimeout);
+  const indicator=document.getElementById('typingIndicator');
+  if(indicator)indicator.classList.remove('show');
   friendId=fId;friendName=fName;
   document.getElementById('chatWithName').textContent=fName;
   document.getElementById('chatHeaderAvatar').textContent=_myBitmoji||fName[0].toUpperCase();
@@ -1955,7 +2325,7 @@ function showGroupChat(){
 const BITMOJI_OPTIONS=['👻','😎','🤩','😜','🥳','😏','🤔','😂','🥺','😍','🤯','🥸','🧑','👩','👨','🧒','👧','👦','🐱','🐶','🦊','🐼','🦁','🐸','🤖','👾','🎃','💀','🧟','🧙'];
 function openBitmoji(){
   const modal=document.getElementById('bitmojiModal');
-  modal.classList.add('open');
+  modal.style.display='flex';
   document.getElementById('bitmojiPreview').textContent=_myBitmoji;
   const grid=document.getElementById('bitmojiGrid');
   grid.innerHTML=BITMOJI_OPTIONS.map(e=>`
@@ -2050,7 +2420,7 @@ function viewStories(uid,name){
   if(!stories.length)return;
   _storyQueue=stories.map(s=>({...s,authorName:name,uid}));
   _storyIdx=0;
-  document.getElementById('storiesModal').classList.add('open');
+  document.getElementById('storiesModal').style.display='flex';
   _showStoryAt(0);
 }
 
@@ -2081,7 +2451,7 @@ function storyNext(){clearInterval(_storySegInterval);_showStoryAt(_storyIdx+1);
 function storyPrev(){clearInterval(_storySegInterval);_showStoryAt(Math.max(0,_storyIdx-1));}
 function closeStory(){
   clearInterval(_storySegInterval);clearTimeout(_storyTimer);
-  document.getElementById('storiesModal').classList.remove('open');
+  document.getElementById('storiesModal').style.display='none';
   _storyQueue=[];_storyIdx=0;
 }
 function sendStoryReply(){
@@ -2109,7 +2479,7 @@ function openSnapView(imgSrc,msgId){
   const modal=document.getElementById('snapViewModal');
   const img=document.getElementById('snapViewImg');
   img.src=imgSrc;
-  modal.classList.add('open');
+  modal.style.display='flex';
   localStorage.setItem('ch_snap_viewed_'+msgId,'1');
   let secs=10;
   document.getElementById('snapViewTimer').textContent=secs+'s';
@@ -2123,12 +2493,11 @@ function openSnapView(imgSrc,msgId){
   modal.ontouchstart=()=>{clearInterval(_snapViewTimeout);};
   modal.onmouseup=()=>{closeSnapView();loadMessages();};
   modal.ontouchend=()=>{closeSnapView();loadMessages();};
-  // Score for opening snap
   addScore(1);
 }
 function closeSnapView(){
   clearInterval(_snapViewTimeout);
-  document.getElementById('snapViewModal').classList.remove('open');
+  document.getElementById('snapViewModal').style.display='none';
   document.getElementById('snapViewImg').src='';
 }
 window.openSnapView=openSnapView;window.closeSnapView=closeSnapView;
@@ -2194,8 +2563,137 @@ function _showScreenshotAlert(msg){
   setTimeout(()=>el.remove(),3500);
 }
 
+/* ── TYPING INDICATOR ── */
+let _typingTimeout=null;
+// _typingPollInterval declared at top with other state vars
+let _lastTypingState=false;
+
+function _setTyping(isTyping){
+  if(!friendId||!me)return;
+  if(isTyping===_lastTypingState)return;
+  _lastTypingState=isTyping;
+  // Store typing state in a supabase field via a lightweight approach: use a messages channel signal
+  // We use localStorage cross-tab signalling as a simple approach for same-device testing
+  // For real cross-user: store in Supabase users table typing_to field
+  sb.from('users').update({typing_to: isTyping ? friendId : null}).eq('id',me.id).then(()=>{});
+}
+
+document.getElementById('msgInput').addEventListener('input',()=>{
+  _setTyping(true);
+  clearTimeout(_typingTimeout);
+  _typingTimeout=setTimeout(()=>_setTyping(false),2500);
+});
+document.getElementById('msgInput').addEventListener('blur',()=>{
+  clearTimeout(_typingTimeout);
+  _setTyping(false);
+});
+
+async function _pollTyping(){
+  if(!friendId||!me)return;
+  try{
+    const{data}=await sb.from('users').select('typing_to').eq('id',friendId).single();
+    const isTyping=data&&data.typing_to===me.id;
+    const indicator=document.getElementById('typingIndicator');
+    const avatar=document.getElementById('typingAvatar');
+    if(indicator){
+      if(isTyping){
+        indicator.classList.add('show');
+        if(avatar)avatar.textContent=friendName?.[0]?.toUpperCase()||'?';
+        // Auto-scroll to show typing indicator
+        const c=document.getElementById('chatMessages');
+        if(c)c.scrollTop=c.scrollHeight;
+      }else{
+        indicator.classList.remove('show');
+      }
+    }
+  }catch(e){}
+}
+
+/* ── PUSH NOTIFICATIONS ── */
+async function _requestNotifPerms(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default'){
+    await Notification.requestPermission();
+  }
+}
+
+function _sendNotification(title,body,tag='msg'){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  if(!document.hidden)return; // only notify when app is in background
+  try{
+    const n=new Notification(title,{body,icon:'/icon-192.png',tag,badge:'/icon-192.png',vibrate:[200,100,200]});
+    n.onclick=()=>{window.focus();n.close();};
+    setTimeout(()=>n.close(),5000);
+  }catch(e){}
+}
+
+/* ── CALL SIGNAL (notify friend you're calling via DB) ── */
+async function _notifyCallSignal(toId,action,type){
+  // Write a system message that the other side polls and shows as incoming
+  // This is how we get call notifications when peer is not yet connected
+  try{
+    await sb.from('messages').insert([{
+      sender_id:me.id,receiver_id:toId,
+      sender_name:me.display_name||me.username,
+      content:`__CALL_SIGNAL__:${action}:${type}:${me.peer_id||'ch_'+me.username}`,
+      type:'system'
+    }]);
+  }catch(e){}
+}
+
+/* ── FRIEND LIST: show "Join" instead of "Call" when already in a call ── */
+function _updateCallButtons(){
+  const inCall=!!currentCall;
+  const audioBtn=document.getElementById('audioCallBtn');
+  const videoBtn=document.getElementById('callFriendBtn');
+  if(audioBtn){
+    audioBtn.title=inCall?'Rejoin call':'Audio call';
+    audioBtn.innerHTML=inCall?'<i class="fas fa-phone-alt"></i>':'<i class="fas fa-phone-alt"></i>';
+    audioBtn.style.background=inCall?'rgba(0,200,83,0.12)':'';
+    audioBtn.style.color=inCall?'#00c853':'';
+  }
+  if(videoBtn){
+    videoBtn.title=inCall?'Rejoin call':'Video call';
+    videoBtn.innerHTML=inCall?'<i class="fas fa-video"></i>':'<i class="fas fa-video"></i>';
+    videoBtn.style.background=inCall?'rgba(0,200,83,0.12)':'';
+    videoBtn.style.color=inCall?'#00c853':'';
+  }
+}
+
+/* ── POLL FOR INCOMING CALL SIGNALS (when peer isn't connected yet) ── */
+let _lastCallSignalId=null;
+async function _pollCallSignals(){
+  if(!me||currentCall||incomingCall)return;
+  try{
+    const{data}=await sb.from('messages')
+      .select('*').eq('receiver_id',me.id).eq('type','system')
+      .like('content','__CALL_SIGNAL__%')
+      .order('created_at',{ascending:false}).limit(1);
+    if(!data||!data.length)return;
+    const m=data[0];
+    if(m.id===_lastCallSignalId)return;
+    _lastCallSignalId=m.id;
+    // Check it's recent (within 30s)
+    if(Date.now()-new Date(m.created_at).getTime()>30000)return;
+    const parts=m.content.split(':');
+    if(parts[1]==='calling'&&parts[3]){
+      // Show incoming banner if peer hasn't fired it yet
+      if(!incomingCall&&!currentCall){
+        const isVid=parts[2]!=='audio';
+        document.getElementById('callerLabel').textContent=m.sender_name||'Someone';
+        document.getElementById('callTypeLabel').textContent=isVid?'📹 Video call incoming…':'📞 Audio call incoming…';
+        document.getElementById('incomingBar').classList.add('show');
+        _sendNotification(m.sender_name||'Someone',isVid?'📹 Incoming video call':'📞 Incoming audio call','call');
+      }
+    }
+    // Delete the signal
+    await sb.from('messages').delete().eq('id',m.id);
+  }catch(e){}
+}
+
 /* ── POLLING ── */
 function startPolling(){
+  // Message + misc poll every 3s
   setInterval(async()=>{
     if(!me)return;
     if(friendId)await loadMessages();
@@ -2208,15 +2706,25 @@ function startPolling(){
       const nb=document.getElementById('navReqBadge');if(nb){nb.style.display='inline';nb.textContent=reqs.length;}}
     else{badge.style.display='none';const nb=document.getElementById('navReqBadge');if(nb)nb.style.display='none';}
     await loadFriendsList();
-    const{data:frList}=await sb.from('friends').select('friend_id').eq('user_id',me.id);
+    // Unread dots + message notifications
+    const{data:frList}=await sb.from('friends').select('friend_id,users!friends_friend_id_fkey(username)').eq('user_id',me.id);
     if(frList){
       for(const f of frList){
         if(f.friend_id===friendId)continue;
-        const{data:msgs}=await sb.from('messages').select('id').eq('sender_id',f.friend_id).eq('receiver_id',me.id);
-        const count=msgs?msgs.length:0;
-        const prev=_lastMsgCount[f.friend_id]||0;
-        if(count>prev){
-          _lastMsgCount[f.friend_id]=count;
+        const{data:msgs}=await sb.from('messages').select('id,content,type').eq('sender_id',f.friend_id).eq('receiver_id',me.id).order('id',{ascending:false}).limit(1);
+        if(!msgs||!msgs.length)continue;
+        const lastMsg=msgs[0];
+        const lastId=lastMsg.id;
+        const prevId=_lastMsgCount[f.friend_id];
+        if(lastId!==prevId){
+          _lastMsgCount[f.friend_id]=lastId;
+          if(prevId!==undefined){
+            // Only notify if we've seen this friend before (not on first load)
+            const notifBody=lastMsg?.type==='snap'?'📸 Sent you a snap!':(lastMsg?.content?.startsWith('__CALL_SIGNAL__')?null:lastMsg?.content?.slice(0,60)||'New message');
+            if(notifBody){
+              _sendNotification(f.users?.username||'Friend',notifBody,'msg_'+f.friend_id);
+            }
+          }
           document.querySelectorAll('.friend-row').forEach(r=>{
             const oc=r.getAttribute('onclick')||'';
             if(oc.includes('selectFriend('+f.friend_id+',')){
@@ -2232,6 +2740,15 @@ function startPolling(){
       }
     }
   },3000);
+
+  // Typing poll every 1.5s
+  _typingPollInterval=setInterval(()=>_pollTyping(),1500);
+
+  // Call signal poll every 2s
+  setInterval(()=>_pollCallSignals(),2000);
+
+  // Request notification permissions
+  _requestNotifPerms();
 }
 </script>
 
