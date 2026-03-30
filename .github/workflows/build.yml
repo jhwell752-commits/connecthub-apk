@@ -59,22 +59,66 @@ jobs:
           npx cap init "ConnectHub" "com.connecthub.app" --web-dir www
           npx cap add android
 
-      # ── KEY FIX: Upgrade Gradle to 8.7 — fixes ASM crash on bcprov-1.79 Java 21 bytecode ──
       - name: Upgrade Gradle wrapper to 8.7
         run: |
           sed -i 's|gradle-[0-9.]*-all|gradle-8.7-all|g' android/gradle/wrapper/gradle-wrapper.properties
           grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
 
+      # ── Patch AndroidManifest using Python to avoid duplicate attribute errors ──
       - name: Patch AndroidManifest
         run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          sed -i 's/android:launchMode="singleTask"/android:launchMode="singleTask"\n            android:supportsPictureInPicture="true"\n            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"/' $MANIFEST
-          sed -i '/<uses-permission android:name="android.permission.INTERNET"/a \
-              <uses-permission android:name="android.permission.CAMERA" />\
-              <uses-permission android:name="android.permission.RECORD_AUDIO" />\
-              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
-              <uses-permission android:name="android.permission.WAKE_LOCK" />' $MANIFEST
+          python3 << 'PYEOF'
+          import xml.etree.ElementTree as ET
+
+          ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
+          ET.register_namespace('tools', 'http://schemas.android.com/tools')
+          ET.register_namespace('', 'http://schemas.android.com/apk/res/android')
+
+          MANIFEST = 'android/app/src/main/AndroidManifest.xml'
+          NS = 'http://schemas.android.com/apk/res/android'
+
+          tree = ET.parse(MANIFEST)
+          root = tree.getroot()
+
+          # Add permissions after <uses-permission INTERNET> if not already present
+          needed_perms = [
+              'android.permission.CAMERA',
+              'android.permission.RECORD_AUDIO',
+              'android.permission.MODIFY_AUDIO_SETTINGS',
+              'android.permission.FOREGROUND_SERVICE',
+              'android.permission.WAKE_LOCK',
+          ]
+          existing = {el.get(f'{{{NS}}}name') for el in root.findall('uses-permission')}
+          insert_idx = 0
+          children = list(root)
+          for i, child in enumerate(children):
+              if child.tag == 'uses-permission':
+                  insert_idx = i + 1
+          for perm in needed_perms:
+              if perm not in existing:
+                  el = ET.Element('uses-permission')
+                  el.set(f'{{{NS}}}name', perm)
+                  root.insert(insert_idx, el)
+                  insert_idx += 1
+
+          # Patch the activity element
+          for app in root.findall('application'):
+              for activity in app.findall('activity'):
+                  # Add supportsPictureInPicture
+                  if not activity.get(f'{{{NS}}}supportsPictureInPicture'):
+                      activity.set(f'{{{NS}}}supportsPictureInPicture', 'true')
+                  # Append PiP-required config changes without duplicating
+                  pip_changes = 'screenSize|smallestScreenSize|screenLayout|orientation'
+                  existing_changes = activity.get(f'{{{NS}}}configChanges', '')
+                  for change in pip_changes.split('|'):
+                      if change not in existing_changes:
+                          existing_changes = (existing_changes + '|' + change).strip('|')
+                  activity.set(f'{{{NS}}}configChanges', existing_changes)
+
+          # Write back preserving declaration
+          tree.write(MANIFEST, xml_declaration=True, encoding='utf-8')
+          print("Manifest patched successfully")
+          PYEOF
 
       - name: Patch build.gradle
         run: |
