@@ -67,9 +67,7 @@ jobs:
       - name: Patch AndroidManifest
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
-          # Add PiP support to the main activity
           sed -i 's/android:launchMode="singleTask"/android:launchMode="singleTask"\n            android:supportsPictureInPicture="true"\n            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"/' $MANIFEST
-          # Add permissions if not already present
           sed -i '/<uses-permission android:name="android.permission.INTERNET"/a \
               <uses-permission android:name="android.permission.CAMERA" />\
               <uses-permission android:name="android.permission.RECORD_AUDIO" />\
@@ -87,6 +85,12 @@ jobs:
       # ── Sync web assets into Android project ──
       - name: Sync Capacitor
         run: npx cap sync android
+
+      # ── Fix: clear corrupted Gradle jar cache (bcprov issue) ──
+      - name: Clear Gradle jar cache
+        run: |
+          rm -rf ~/.gradle/caches/jars-9
+          rm -rf ~/.gradle/caches/modules-2/files-2.1/org.bouncycastle
 
       # ── Generate signing keystore ──
       - name: Generate keystore
@@ -107,7 +111,6 @@ jobs:
         run: |
           cp connecthub.keystore android/app/connecthub.keystore
           cat >> android/app/build.gradle << 'EOF'
-
           android {
               signingConfigs {
                   release {
@@ -129,7 +132,9 @@ jobs:
       # ── Build the APK ──
       - name: Build APK
         working-directory: android
-        run: ./gradlew assembleRelease
+        run: |
+          ./gradlew --stop || true
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       # ── Upload APK artifact ──
       - name: Upload APK
