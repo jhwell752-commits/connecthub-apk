@@ -276,9 +276,108 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
 #snapViewfinder{transform:scaleX(-1);}
 #snapCanvas{transform:none;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+/* ══ STORIES OVERLAY ══ */
+#storiesModal{display:none;position:fixed;inset:0;background:#000;z-index:19000;flex-direction:column;}
+#storiesModal.open{display:flex;}
+.story-view{flex:1;position:relative;overflow:hidden;background:#111;}
+#storyImg{width:100%;height:100%;object-fit:cover;display:block;}
+.story-progress-bar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;gap:3px;padding:10px 10px 0;}
+.story-seg{flex:1;height:3px;background:rgba(255,255,255,0.3);border-radius:99px;overflow:hidden;}
+.story-seg-fill{height:100%;background:#fff;width:0%;transition:none;}
+.story-seg-fill.done{width:100%;}
+.story-header{position:absolute;top:18px;left:0;right:0;z-index:21;display:flex;align-items:center;gap:.6rem;padding:0 1rem;}
+.story-close{position:absolute;top:18px;right:1rem;z-index:22;background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;padding:4px;}
+.story-footer{position:absolute;bottom:0;left:0;right:0;z-index:20;padding:1rem;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);}
+.story-reply-input{background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);color:#fff;border-radius:999px;padding:.55rem 1rem;width:100%;font-size:.88rem;outline:none;}
+.story-reply-input::placeholder{color:rgba(255,255,255,0.6);}
+
+/* ══ ADD STORY BUTTON ══ */
+.story-add-bubble{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;}
+.story-add-ring{width:52px;height:52px;border-radius:50%;background:#f0f0f0;border:2px dashed #ddd;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:#aaa;}
+
+/* ══ BITMOJI / AVATAR MODAL ══ */
+#bitmojiModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:18000;align-items:center;justify-content:center;}
+#bitmojiModal.open{display:flex;}
+.bitmoji-card{background:#fff;border-radius:20px;padding:1.5rem;width:min(92vw,380px);max-height:85vh;overflow-y:auto;}
+.bitmoji-card h2{font-size:1.1rem;font-weight:900;margin-bottom:1rem;}
+.bitmoji-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;}
+.bitmoji-cell{border-radius:12px;background:#f5f5f5;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:2rem;cursor:pointer;transition:background .15s;border:2px solid transparent;}
+.bitmoji-cell:hover,.bitmoji-cell.selected{background:#fffde0;border-color:#FFFC00;}
+.bitmoji-preview{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#FFFC00,#FFD700);display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin:0 auto .5rem;cursor:pointer;border:3px solid #FFFC00;transition:transform .15s;}
+.bitmoji-preview:hover{transform:scale(1.08);}
+
+/* ══ SNAP VIEW MODAL (click to view, one-time) ══ */
+#snapViewModal{display:none;position:fixed;inset:0;background:#000;z-index:20000;flex-direction:column;align-items:center;justify-content:center;}
+#snapViewModal.open{display:flex;}
+.snap-view-img{max-width:100%;max-height:85vh;object-fit:contain;border-radius:.5rem;}
+.snap-view-timer{position:absolute;top:20px;right:20px;font-size:1.2rem;font-weight:900;color:#FFFC00;font-family:monospace;}
+.snap-view-close{position:absolute;top:20px;left:20px;background:rgba(0,0,0,.5);border:none;color:#fff;border-radius:50%;width:36px;height:36px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.snap-unviewed{cursor:pointer;background:#fffde0!important;border:2px solid #FFFC00!important;}
+.snap-tap-label{position:absolute;bottom:0;left:0;right:0;text-align:center;padding:.5rem;font-size:.8rem;font-weight:700;color:#FFFC00;background:rgba(0,0,0,.5);border-radius:0 0 .75rem .75rem;}
+
+/* ══ SCREENSHOT ALERT ══ */
+.screenshot-alert{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:999px;z-index:99999;font-size:.82rem;font-weight:700;display:flex;align-items:center;gap:.5rem;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:ssAlert .3s ease;}
+@keyframes ssAlert{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* ══ SNAPSTREAK ══ */
+.streak-badge{display:inline-flex;align-items:center;gap:3px;background:linear-gradient(135deg,#ff6b00,#ffb347);color:#fff;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:999px;margin-left:4px;}
+.streak-header{display:flex;align-items:center;gap:.4rem;padding:.35rem .85rem;background:linear-gradient(135deg,#fff8f0,#fff3e0);border-bottom:1px solid #ffe0b2;font-size:.78rem;font-weight:700;color:#e65100;}
+
+/* ══ CALL CONTROLS AUTO-HIDE ══ */
+#videoModal .call-controls{transition:opacity .4s,visibility .4s;}
+#videoModal .call-controls.hidden{opacity:0;visibility:hidden;}
+#videoModal .call-top-bar{transition:opacity .4s,visibility .4s;}
+#videoModal .call-top-bar.hidden{opacity:0;visibility:hidden;}
 </style>
 </head>
 <body>
+
+<!-- ══ STORIES MODAL ══ -->
+<div id="storiesModal">
+  <div class="story-view">
+    <div class="story-progress-bar" id="storyProgressBar"></div>
+    <div class="story-header">
+      <div id="storyAuthorAvatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FFFC00,#FFD700);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;color:#000;flex-shrink:0;"></div>
+      <div>
+        <p style="font-weight:700;font-size:.88rem;color:#fff;" id="storyAuthorName"></p>
+        <p style="font-size:.68rem;color:rgba(255,255,255,0.6);" id="storyTimeLabel"></p>
+      </div>
+    </div>
+    <button class="story-close" onclick="closeStory()">✕</button>
+    <img id="storyImg" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+    <div id="storyVideoWrap" style="display:none;width:100%;height:100%;">
+      <video id="storyVideo" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+    </div>
+    <!-- tap zones -->
+    <div style="position:absolute;inset:0;display:flex;z-index:15;">
+      <div style="flex:1;" onclick="storyPrev()"></div>
+      <div style="flex:1;" onclick="storyNext()"></div>
+    </div>
+    <div class="story-footer">
+      <input class="story-reply-input" id="storyReplyInput" placeholder="Reply…" onkeypress="if(event.key==='Enter')sendStoryReply()">
+    </div>
+  </div>
+</div>
+
+<!-- ══ BITMOJI MODAL ══ -->
+<div id="bitmojiModal">
+  <div class="bitmoji-card">
+    <h2>🎭 My Bitmoji</h2>
+    <div class="bitmoji-preview" id="bitmojiPreview" onclick="document.getElementById('bitmojiModal').classList.remove('open')">👻</div>
+    <p style="text-align:center;font-size:.75rem;color:#aaa;margin-bottom:.75rem;">Tap to pick your avatar</p>
+    <div class="bitmoji-grid" id="bitmojiGrid"></div>
+    <button onclick="document.getElementById('bitmojiModal').classList.remove('open')" style="width:100%;margin-top:1rem;background:#f5f5f5;border:none;border-radius:12px;padding:.65rem;font-weight:700;cursor:pointer;font-size:.9rem;">Done</button>
+  </div>
+</div>
+
+<!-- ══ SNAP VIEW MODAL ══ -->
+<div id="snapViewModal">
+  <button class="snap-view-close" onclick="closeSnapView()"><i class="fas fa-times"></i></button>
+  <span class="snap-view-timer" id="snapViewTimer"></span>
+  <img id="snapViewImg" class="snap-view-img" src="" alt="Snap">
+  <p style="color:rgba(255,255,255,.5);font-size:.75rem;margin-top:.75rem;">Hold to keep open · Release to close</p>
+</div>
 
 <!-- ══ INCOMING CALL BANNER ══ -->
 <div id="incomingBar">
@@ -424,12 +523,14 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
   <!-- Desktop top nav -->
   <div class="top-nav">
     <div class="top-nav-left">
-      <div class="user-avatar" id="avatarCircle">?</div>
+      <div class="user-avatar" id="avatarCircle" onclick="openBitmoji()" title="My Bitmoji" style="font-size:1.2rem;">?</div>
       <span style="font-size:.88rem;font-weight:700;color:#1a1a1a;" id="headerUsername"></span>
       <span class="score-badge" id="headerScoreDesktop">0</span>
     </div>
     <div class="top-nav-center">👻</div>
     <div class="top-nav-right">
+      <button class="nav-icon-btn" title="My Bitmoji" onclick="openBitmoji()"><i class="fas fa-smile"></i></button>
+      <button class="nav-icon-btn" title="Stories" onclick="openStoriesTab()"><i class="fas fa-circle-notch"></i></button>
       <button class="nav-icon-btn" title="Add friend" onclick="switchSidebarTab('friends')"><i class="fas fa-user-plus"></i></button>
       <button class="nav-icon-btn" title="Groups" onclick="switchSidebarTab('groups')"><i class="fas fa-users"></i></button>
       <button class="btn-red" id="logoutBtn" style="padding:.38rem .9rem;border-radius:10px;font-size:.8rem;font-weight:700;margin-left:.25rem;">Sign out</button>
@@ -453,7 +554,13 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
       </div>
 
       <!-- Story bubbles row -->
-      <div class="story-row" id="storyRow"></div>
+      <div class="story-row" id="storyRow">
+        <!-- Add my story -->
+        <div class="story-add-bubble" onclick="addMyStory()">
+          <div class="story-add-ring">+</div>
+          <span class="story-name">My Story</span>
+        </div>
+      </div>
 
       <!-- Sidebar nav tabs -->
       <div class="sidebar-nav-tabs">
@@ -541,7 +648,7 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
           <div class="chat-header-avatar" id="chatHeaderAvatar">?</div>
           <div class="chat-header-info">
             <div class="chat-header-name" id="chatWithName">—</div>
-            <div id="chatFriendScore" style="font-size:.7rem;color:#888;"></div>
+            <div id="chatFriendScore" style="font-size:.7rem;color:#888;display:flex;align-items:center;gap:.35rem;"></div>
           </div>
         </div>
         <div class="chat-header-actions">
@@ -593,6 +700,9 @@ body{background:#fff;font-family:-apple-system,'Segoe UI',sans-serif;min-height:
   <button data-stab="groups" onclick="switchSidebarTab('groups',this,true)">
     <i class="fas fa-users"></i>Groups
   </button>
+  <button onclick="openStoriesTab()">
+    <i class="fas fa-circle-notch"></i>Stories
+  </button>
   <button data-stab="friends" onclick="switchSidebarTab('friends',this,true)" style="position:relative;">
     <i class="fas fa-user-friends"></i>Friends
     <span id="navReqBadge" style="display:none;position:absolute;top:6px;right:calc(50% - 18px);background:#ff4d4d;color:#fff;font-size:.55rem;font-weight:700;padding:1px 4px;border-radius:999px;">0</span>
@@ -618,6 +728,15 @@ let isMicOn=true,isCamOn=true,isVideoCall=true;
 let pipDragOffX=0,pipDragOffY=0,pipDragging=false;
 let _callFacingMode='user';
 let _screenShareStream=null,_isScreenSharing=false;
+
+/* ── New feature state ── */
+let _myBitmoji='👻';
+let _stories={}; // {userId: [{img,ts,authorName}]}
+let _storyQueue=[],_storyIdx=0,_storyTimer=null,_storySegInterval=null;
+let _streaks={}; // {friendId: {count,lastDate}}
+let _wakeLock=null;
+let _callControlsTimeout=null;
+let _snapViewTimeout=null;
 
 /* ── Utils ── */
 function esc(s){return s?String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])):''}
@@ -657,6 +776,7 @@ document.getElementById('loginBtn').onclick=async()=>{
     const{data,error}=await sb.from('users').select('*').eq('username',u).eq('password',p);
     if(error)return toast('DB error: '+error.message);
     if(!data||!data.length)return toast('Wrong username or password');
+    localStorage.setItem('ch_session',JSON.stringify({u,p}));
     await boot(data[0]);
   }catch(e){
     toast('Error: '+e.message);
@@ -717,20 +837,44 @@ async function boot(user){
   document.getElementById('authCard').style.display='none';
   document.getElementById('mainApp').style.display='block';
   document.getElementById('headerUsername').textContent=me.display_name||me.username;
-  document.getElementById('avatarCircle').textContent=(me.display_name||me.username)[0].toUpperCase();
+  // Load saved bitmoji
+  _myBitmoji=localStorage.getItem('ch_bitmoji_'+me.id)||'👻';
+  document.getElementById('avatarCircle').textContent=_myBitmoji;
   document.getElementById('headerScore').textContent=me.snap_score||0;
   document.getElementById('headerScoreDesktop').textContent=me.snap_score||0;
   // Profile panel
   const dn=me.display_name||me.username;
   const pdEl=document.getElementById('profileDisplayName');if(pdEl)pdEl.textContent=dn;
-  const paEl=document.getElementById('profileAvatarBig');if(paEl)paEl.textContent=dn[0].toUpperCase();
+  const paEl=document.getElementById('profileAvatarBig');if(paEl)paEl.textContent=_myBitmoji;
+  // Load streaks from localStorage
+  try{_streaks=JSON.parse(localStorage.getItem('ch_streaks_'+me.id)||'{}');}catch(e){_streaks={};}
+  // Wake lock
+  if('wakeLock' in navigator){
+    try{_wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
+  }
   buildStoryRow();
   initPeer();
   await loadFriendsList();await loadGroups();await loadRequests();
   startPolling();
+  await loadAllStories();
   // Request camera + mic permissions upfront so calls work immediately
   _requestMediaPermissions();
+  // Screenshot detection
+  _initScreenshotDetection();
 }
+
+/* ── AUTO LOGIN ── */
+(async()=>{
+  try{
+    const sess=localStorage.getItem('ch_session');
+    if(!sess)return;
+    const{u,p}=JSON.parse(sess);
+    if(!u||!p)return;
+    const{data}=await sb.from('users').select('*').eq('username',u).eq('password',p);
+    if(data&&data.length){await boot(data[0]);}
+    else{localStorage.removeItem('ch_session');}
+  }catch(e){}
+})();
 
 /* ── DISPLAY NAME ── */
 document.getElementById('saveDisplayNameBtn').onclick=async()=>{
@@ -764,8 +908,10 @@ function _dnMsg(msg,color){
 document.getElementById('logoutBtn').onclick=doLogout;
 if(document.getElementById('logoutBtnMobile'))document.getElementById('logoutBtnMobile').onclick=doLogout;
 function doLogout(){
+  localStorage.removeItem('ch_session');
   if(localStream)localStream.getTracks().forEach(t=>t.stop());
   if(currentCall)currentCall.close();if(peer)peer.destroy();
+  if(_wakeLock){try{_wakeLock.release();}catch(e){}_wakeLock=null;}
   me=null;friendId=null;groupId=null;
   hidePip();hideModal();
   document.getElementById('mainApp').style.display='none';
@@ -1022,10 +1168,68 @@ async function toggleScreenShare(){
   }
 }
 
-/* ── DRAGGABLE LOCAL VIDEO ── */
+/* ── DRAGGABLE LOCAL VIDEO + SWAP ON TAP ── */
+(()=>{
+  const lv=document.getElementById('localVideo');
+  const rv=document.getElementById('remoteVideo');
+  let ldx=0,ldy=0,lDragging=false,lMoved=false,lStartX=0,lStartY=0;
+  function lvPointerDown(e){
+    const t=e.touches?e.touches[0]:e;
+    lStartX=t.clientX;lStartY=t.clientY;lMoved=false;lDragging=true;
+    ldx=t.clientX-lv.getBoundingClientRect().left;
+    ldy=t.clientY-lv.getBoundingClientRect().top;
+  }
+  function lvPointerMove(e){
+    if(!lDragging)return;
+    const t=e.touches?e.touches[0]:e;
+    if(Math.abs(t.clientX-lStartX)>8||Math.abs(t.clientY-lStartY)>8)lMoved=true;
+    let x=t.clientX-ldx,y=t.clientY-ldy;
+    const pw=window.innerWidth,ph=window.innerHeight;
+    x=Math.max(8,Math.min(pw-lv.offsetWidth-8,x));
+    y=Math.max(8,Math.min(ph-lv.offsetHeight-8,y));
+    lv.style.right='auto';lv.style.bottom='auto';
+    lv.style.left=x+'px';lv.style.top=y+'px';
+  }
+  function lvPointerUp(){
+    if(!lDragging)return;lDragging=false;
+    if(!lMoved){
+      // Swap local <-> remote video positions (Snapchat style)
+      const tmpSrc=lv.srcObject;lv.srcObject=rv.srcObject;rv.srcObject=tmpSrc;
+      const tmpTransform=lv.style.transform;
+      lv.style.transform=rv.style.transform||'';rv.style.transform=tmpTransform;
+    }
+  }
+  lv.addEventListener('mousedown',lvPointerDown);
+  lv.addEventListener('touchstart',lvPointerDown,{passive:true});
+  document.addEventListener('mousemove',lvPointerMove);
+  document.addEventListener('touchmove',e=>{if(lDragging)lvPointerMove(e);},{passive:true});
+  document.addEventListener('mouseup',lvPointerUp);
+  document.addEventListener('touchend',lvPointerUp);
+})();
+
+/* ── CALL CONTROLS AUTO-HIDE (show 5s then hide, tap bottom to show again) ── */
+function _resetCallControlsTimer(){
+  const cc=document.getElementById('videoModal').querySelector('.call-controls');
+  const tb=document.getElementById('videoModal').querySelector('.call-top-bar');
+  if(!cc||!tb)return;
+  cc.classList.remove('hidden');tb.classList.remove('hidden');
+  clearTimeout(_callControlsTimeout);
+  _callControlsTimeout=setTimeout(()=>{cc.classList.add('hidden');tb.classList.add('hidden');},5000);
+}
+document.getElementById('videoModal').addEventListener('click',e=>{
+  const cc=document.getElementById('videoModal').querySelector('.call-controls');
+  if(cc&&cc.classList.contains('hidden')){_resetCallControlsTimer();return;}
+});
+document.getElementById('videoModal').addEventListener('touchstart',()=>{_resetCallControlsTimer();},{passive:true});
+// Show controls when modal opens
+const _origOpenModal=window.openModal;
+function openModal(){
+  document.getElementById('videoModal').style.display='flex';
+  hidePip();
+  _resetCallControlsTimer();
+}
 
 
-/* ── START CALL ── */
 async function _getCallStream(type){
   const isVid=(type==='video');
   const constraints={
@@ -1136,9 +1340,8 @@ function setCallUI(name,type){
   document.getElementById('camBtn').className='ctrl-btn '+(isVideoCall?'on':'off');
   document.getElementById('camIcon').className=isVideoCall?'fas fa-video':'fas fa-video-slash';
   document.getElementById('localVideo').classList.remove('cam-off');
-  const isTouchDev=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const fb=document.getElementById('flipBtn');
-  if(fb)fb.style.display=(isVideoCall&&isTouchDev)?'flex':'none';
+  if(fb)fb.style.display=isVideoCall?'flex':'none';
 }
 
 /* ── CALL TIMER ── */
@@ -1480,8 +1683,10 @@ async function loadFriendsList(){
 window.selectFriend=function(fId,fName,fScore){
   friendId=fId;friendName=fName;
   document.getElementById('chatWithName').textContent=fName;
-  document.getElementById('chatHeaderAvatar').textContent=fName[0].toUpperCase();
-  document.getElementById('chatFriendScore').textContent='👻 '+fScore+' snaps';
+  document.getElementById('chatHeaderAvatar').textContent=_myBitmoji||fName[0].toUpperCase();
+  const streak=_streaks[fId]||{count:0};
+  const streakHtml=streak.count>=1?`<span class="streak-badge">🔥 ${streak.count} day streak</span>`:'';
+  document.getElementById('chatFriendScore').innerHTML='👻 '+fScore+' snaps '+streakHtml;
   document.getElementById('callFriendBtn').style.display='flex';
   document.getElementById('audioCallBtn').style.display='flex';
   document.getElementById('callMoreBtn').style.display='flex';
@@ -1521,12 +1726,33 @@ async function loadMessages(){
     const bc='bubble '+(mine?'mine':'theirs');
     const delBtn=mine?`<button class="del-btn" title="Delete" onclick="deleteMsg(${m.id})">✕</button>`:'';
     if(m.type==='snap'){
-      return `<div class="${wrapCls}">
-        ${delBtn}
-        <p style="font-size:.7rem;color:#aaa;margin-bottom:2px;">${mine?'You sent a snap 📸':'📸 Snap'}</p>
-        <img src="${esc(m.content)}" class="snap-img">
-        <span class="bubble-time">${fmtTime(m.created_at)}</span>
-      </div>`;
+      const mine=m.sender_id===me.id;
+      const viewed=localStorage.getItem('ch_snap_viewed_'+m.id);
+      if(mine){
+        return `<div class="${wrapCls}">
+          ${delBtn}
+          <p style="font-size:.7rem;color:#aaa;margin-bottom:2px;">📸 You sent a snap</p>
+          <img src="${esc(m.content)}" class="snap-img">
+          <span class="bubble-time">${fmtTime(m.created_at)}</span>
+        </div>`;
+      }else{
+        // Received snap — tap to view (Snapchat style)
+        if(viewed){
+          return `<div class="${wrapCls}">
+            <p style="font-size:.7rem;color:#aaa;margin-bottom:2px;">📸 Snap opened</p>
+            <div style="background:#f5f5f5;border-radius:.75rem;padding:.5rem .85rem;display:flex;align-items:center;gap:.5rem;color:#aaa;font-size:.8rem;"><i class="fas fa-camera"></i> Snap — opened</div>
+            <span class="bubble-time">${fmtTime(m.created_at)}</span>
+          </div>`;
+        }else{
+          return `<div class="${wrapCls}">
+            <p style="font-size:.7rem;color:#FFBF00;margin-bottom:2px;font-weight:700;">📸 New Snap!</p>
+            <div class="snap-unviewed" onclick="openSnapView('${esc(m.content)}',${m.id})" style="background:#fffde0;border:2px solid #FFFC00;border-radius:.75rem;padding:.6rem 1rem;cursor:pointer;display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:.85rem;color:#b8860b;position:relative;">
+              <i class="fas fa-camera" style="color:#FFBF00;font-size:1.1rem;"></i> Tap to view snap
+            </div>
+            <span class="bubble-time">${fmtTime(m.created_at)}</span>
+          </div>`;
+        }
+      }
     }
     return `<div class="${wrapCls}">
       ${delBtn}
@@ -1642,6 +1868,7 @@ async function sendSnapFromCamera(){
   }]);
   if(error){console.error(error);return;}
   await addScore(1);
+  _updateStreak(friendId);
   await loadMessages();
 }
 
@@ -1722,26 +1949,249 @@ function showGroupChat(){
   closeFriendsPanel();
 }
 
-/* ── STORY ROW ── */
+/* ── STORY ROW (defined earlier, this stub kept for compatibility) ── */
+
+/* ── BITMOJI ── */
+const BITMOJI_OPTIONS=['👻','😎','🤩','😜','🥳','😏','🤔','😂','🥺','😍','🤯','🥸','🧑','👩','👨','🧒','👧','👦','🐱','🐶','🦊','🐼','🦁','🐸','🤖','👾','🎃','💀','🧟','🧙'];
+function openBitmoji(){
+  const modal=document.getElementById('bitmojiModal');
+  modal.classList.add('open');
+  document.getElementById('bitmojiPreview').textContent=_myBitmoji;
+  const grid=document.getElementById('bitmojiGrid');
+  grid.innerHTML=BITMOJI_OPTIONS.map(e=>`
+    <div class="bitmoji-cell${e===_myBitmoji?' selected':''}" onclick="selectBitmoji('${e}')">${e}</div>
+  `).join('');
+}
+function selectBitmoji(emoji){
+  _myBitmoji=emoji;
+  if(me)localStorage.setItem('ch_bitmoji_'+me.id,emoji);
+  document.getElementById('bitmojiPreview').textContent=emoji;
+  document.getElementById('avatarCircle').textContent=emoji;
+  const paEl=document.getElementById('profileAvatarBig');if(paEl)paEl.textContent=emoji;
+  document.querySelectorAll('.bitmoji-cell').forEach(c=>{
+    c.classList.toggle('selected',c.textContent===emoji);
+  });
+}
+window.selectBitmoji=selectBitmoji;
+window.openBitmoji=openBitmoji;
+
+/* ── STORIES ── */
+async function loadAllStories(){
+  if(!me)return;
+  // Load stories stored in localStorage (keyed by userId)
+  try{
+    const raw=localStorage.getItem('ch_stories');
+    if(raw)_stories=JSON.parse(raw);
+  }catch(e){_stories={};}
+  buildStoryRow();
+}
+
 async function buildStoryRow(){
   const row=document.getElementById('storyRow');
   if(!row)return;
-  const{data}=await sb.from('friends').select('friend_id,users!friends_friend_id_fkey(username)').eq('user_id',me.id);
+  // Keep add-my-story button
+  const addBtn=row.querySelector('.story-add-bubble');
   row.innerHTML='';
-  if(!data||!data.length){row.style.display='none';return;}
-  row.style.display='flex';
-  data.slice(0,8).forEach(f=>{
-    const name=f.users?.username||'?';
-    const bubble=document.createElement('div');
-    bubble.className='story-bubble';
-    bubble.innerHTML=`<div class="story-ring"><div class="story-ring-inner">${name[0].toUpperCase()}</div></div><span class="story-name">${name}</span>`;
-    bubble.onclick=()=>{
-      document.querySelectorAll('.friend-row').forEach(r=>{
-        if((r.getAttribute('onclick')||'').includes("selectFriend("+f.friend_id+",")){r.click();}
-      });
-    };
-    row.appendChild(bubble);
+  if(addBtn)row.appendChild(addBtn);
+
+  if(!me)return;
+  // My story
+  const myStories=(_stories[me.id]||[]).filter(s=>(Date.now()-s.ts)<86400000);
+  if(myStories.length){
+    const b=_makeStoryBubble(me.id,'Me',_myBitmoji,true);
+    row.insertBefore(b,addBtn?addBtn.nextSibling:null);
+  }
+
+  // Friends
+  const{data}=await sb.from('friends').select('friend_id,users!friends_friend_id_fkey(username)').eq('user_id',me.id);
+  if(!data||!data.length)return;
+  data.forEach(f=>{
+    const fStories=(_stories[f.friend_id]||[]).filter(s=>(Date.now()-s.ts)<86400000);
+    if(fStories.length){
+      const name=f.users?.username||'?';
+      const bm=localStorage.getItem('ch_bitmoji_'+f.friend_id)||name[0].toUpperCase();
+      row.appendChild(_makeStoryBubble(f.friend_id,name,bm,false));
+    }
   });
+}
+
+function _makeStoryBubble(uid,name,avatar,isMine){
+  const b=document.createElement('div');
+  b.className='story-bubble';
+  b.innerHTML=`<div class="story-ring"><div class="story-ring-inner" style="font-size:1.4rem;">${avatar}</div></div><span class="story-name">${name.length>6?name.slice(0,6)+'…':name}</span>`;
+  b.onclick=()=>viewStories(uid,name);
+  return b;
+}
+
+function addMyStory(){
+  if(!me){toast('Login first');return;}
+  const input=document.createElement('input');
+  input.type='file';input.accept='image/*';
+  input.onchange=async(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=async(ev)=>{
+      if(!_stories[me.id])_stories[me.id]=[];
+      _stories[me.id].push({img:ev.target.result,ts:Date.now(),authorName:me.display_name||me.username});
+      // Keep only last 10 and last 24h
+      _stories[me.id]=_stories[me.id].filter(s=>(Date.now()-s.ts)<86400000).slice(-10);
+      localStorage.setItem('ch_stories',JSON.stringify(_stories));
+      await buildStoryRow();
+      _showScreenshotAlert('📸 Story posted!');
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+window.addMyStory=addMyStory;
+
+function viewStories(uid,name){
+  const stories=(_stories[uid]||[]).filter(s=>(Date.now()-s.ts)<86400000);
+  if(!stories.length)return;
+  _storyQueue=stories.map(s=>({...s,authorName:name,uid}));
+  _storyIdx=0;
+  document.getElementById('storiesModal').classList.add('open');
+  _showStoryAt(0);
+}
+
+function _showStoryAt(idx){
+  if(idx>=_storyQueue.length){closeStory();return;}
+  _storyIdx=idx;
+  const s=_storyQueue[idx];
+  document.getElementById('storyImg').src=s.img;
+  document.getElementById('storyImg').style.display='block';
+  document.getElementById('storyAuthorName').textContent=s.authorName||'Unknown';
+  document.getElementById('storyAuthorAvatar').textContent=localStorage.getItem('ch_bitmoji_'+s.uid)||s.authorName?.[0]?.toUpperCase()||'?';
+  const ago=Math.floor((Date.now()-s.ts)/60000);
+  document.getElementById('storyTimeLabel').textContent=ago<60?ago+'m ago':Math.floor(ago/60)+'h ago';
+  // Progress segments
+  const bar=document.getElementById('storyProgressBar');
+  bar.innerHTML=_storyQueue.map((_,i)=>`<div class="story-seg"><div class="story-seg-fill${i<idx?' done':''}"></div></div>`).join('');
+  const fill=bar.children[idx]?.querySelector('.story-seg-fill');
+  clearInterval(_storySegInterval);clearTimeout(_storyTimer);
+  let pct=0;
+  _storySegInterval=setInterval(()=>{
+    pct+=100/50;// 5s total (100ms intervals)
+    if(fill)fill.style.width=Math.min(100,pct)+'%';
+    if(pct>=100){clearInterval(_storySegInterval);storyNext();}
+  },100);
+}
+
+function storyNext(){clearInterval(_storySegInterval);_showStoryAt(_storyIdx+1);}
+function storyPrev(){clearInterval(_storySegInterval);_showStoryAt(Math.max(0,_storyIdx-1));}
+function closeStory(){
+  clearInterval(_storySegInterval);clearTimeout(_storyTimer);
+  document.getElementById('storiesModal').classList.remove('open');
+  _storyQueue=[];_storyIdx=0;
+}
+function sendStoryReply(){
+  const val=document.getElementById('storyReplyInput').value.trim();
+  if(!val||!_storyQueue[_storyIdx])return;
+  const s=_storyQueue[_storyIdx];
+  if(s.uid&&s.uid!==me.id){
+    // Send as chat message
+    sb.from('messages').insert([{sender_id:me.id,receiver_id:s.uid,sender_name:me.username,content:'📸 Story reply: '+val,type:'text'}]);
+  }
+  document.getElementById('storyReplyInput').value='';
+  _showScreenshotAlert('Reply sent!');
+}
+function openStoriesTab(){
+  // Open friend stories if any, else show "no stories"
+  const allUids=Object.keys(_stories).filter(uid=>(_stories[uid]||[]).some(s=>(Date.now()-s.ts)<86400000));
+  if(!allUids.length){_showScreenshotAlert('📷 No stories yet. Post one!');return;}
+  viewStories(allUids[0],allUids[0]===String(me?.id)?'My Story':'Friend');
+}
+window.storyNext=storyNext;window.storyPrev=storyPrev;window.closeStory=closeStory;
+window.sendStoryReply=sendStoryReply;window.openStoriesTab=openStoriesTab;
+
+/* ── SNAP VIEW (Tap to view, one-time) ── */
+function openSnapView(imgSrc,msgId){
+  const modal=document.getElementById('snapViewModal');
+  const img=document.getElementById('snapViewImg');
+  img.src=imgSrc;
+  modal.classList.add('open');
+  localStorage.setItem('ch_snap_viewed_'+msgId,'1');
+  let secs=10;
+  document.getElementById('snapViewTimer').textContent=secs+'s';
+  _snapViewTimeout=setInterval(()=>{
+    secs--;
+    document.getElementById('snapViewTimer').textContent=secs+'s';
+    if(secs<=0){closeSnapView();loadMessages();}
+  },1000);
+  // Hold to keep open, release to close
+  modal.onmousedown=()=>{clearInterval(_snapViewTimeout);};
+  modal.ontouchstart=()=>{clearInterval(_snapViewTimeout);};
+  modal.onmouseup=()=>{closeSnapView();loadMessages();};
+  modal.ontouchend=()=>{closeSnapView();loadMessages();};
+  // Score for opening snap
+  addScore(1);
+}
+function closeSnapView(){
+  clearInterval(_snapViewTimeout);
+  document.getElementById('snapViewModal').classList.remove('open');
+  document.getElementById('snapViewImg').src='';
+}
+window.openSnapView=openSnapView;window.closeSnapView=closeSnapView;
+
+/* ── SNAPSTREAKS ── */
+function _updateStreak(fId){
+  if(!me||!fId)return;
+  const today=new Date().toDateString();
+  const s=_streaks[fId]||{count:0,lastDate:null,lastByMe:null};
+  if(s.lastDate===today){
+    // Already snapped today — no change but mark as active
+    _streaks[fId]=s;
+  }else{
+    const yesterday=new Date(Date.now()-86400000).toDateString();
+    if(s.lastDate===yesterday){
+      s.count=(s.count||0)+1;
+    }else if(s.lastDate&&s.lastDate!==yesterday){
+      s.count=1; // streak broken, restart
+    }else{
+      s.count=1;
+    }
+    s.lastDate=today;
+    _streaks[fId]=s;
+    if(s.count>1)_showScreenshotAlert('🔥 '+s.count+' day streak with '+friendName+'!');
+  }
+  if(me)localStorage.setItem('ch_streaks_'+me.id,JSON.stringify(_streaks));
+}
+
+/* ── SCREENSHOT DETECTION ── */
+function _initScreenshotDetection(){
+  // Visibility change heuristic for screenshots
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden&&friendId&&me){
+      // Could be screenshot — we'll notify when they come back
+    }
+  });
+  // Key combo detection (desktop)
+  document.addEventListener('keydown',e=>{
+    if((e.key==='PrintScreen')||(e.metaKey&&e.shiftKey&&(e.key==='3'||e.key==='4'||e.key==='5'))){
+      _onScreenshot();
+    }
+  });
+}
+
+function _onScreenshot(){
+  _showScreenshotAlert('📸 '+((me?.display_name||me?.username)||'Someone')+' took a screenshot!');
+  if(friendId&&me){
+    sb.from('messages').insert([{
+      sender_id:me.id,receiver_id:friendId,
+      sender_name:me.username,
+      content:'📸 '+((me.display_name||me.username)||'Someone')+' took a screenshot!',
+      type:'system'
+    }]).then(()=>loadMessages());
+  }
+}
+
+function _showScreenshotAlert(msg){
+  const old=document.getElementById('ssAlert');if(old)old.remove();
+  const el=document.createElement('div');
+  el.id='ssAlert';el.className='screenshot-alert';
+  el.innerHTML=`<i class="fas fa-camera"></i> ${msg}`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),3500);
 }
 
 /* ── POLLING ── */
