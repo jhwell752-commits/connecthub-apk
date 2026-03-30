@@ -64,61 +64,61 @@ jobs:
           sed -i 's|gradle-[0-9.]*-all|gradle-8.7-all|g' android/gradle/wrapper/gradle-wrapper.properties
           grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
 
-      # ── Patch AndroidManifest using Python to avoid duplicate attribute errors ──
-      - name: Patch AndroidManifest
+      # ── Overwrite AndroidManifest with a clean known-good version ──
+      - name: Write AndroidManifest
         run: |
-          python3 << 'PYEOF'
-          import xml.etree.ElementTree as ET
+          cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-          ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
-          ET.register_namespace('tools', 'http://schemas.android.com/tools')
-          ET.register_namespace('', 'http://schemas.android.com/apk/res/android')
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
-          MANIFEST = 'android/app/src/main/AndroidManifest.xml'
-          NS = 'http://schemas.android.com/apk/res/android'
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme"
+                  android:usesCleartextTraffic="true"
+                  android:hardwareAccelerated="true">
 
-          tree = ET.parse(MANIFEST)
-          root = tree.getroot()
+                  <activity
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                      android:name="com.connecthub.app.MainActivity"
+                      android:label="@string/title_activity_main"
+                      android:launchMode="singleTask"
+                      android:supportsPictureInPicture="true"
+                      android:theme="@style/AppTheme.NoActionBarLaunch"
+                      android:exported="true">
 
-          # Add permissions after <uses-permission INTERNET> if not already present
-          needed_perms = [
-              'android.permission.CAMERA',
-              'android.permission.RECORD_AUDIO',
-              'android.permission.MODIFY_AUDIO_SETTINGS',
-              'android.permission.FOREGROUND_SERVICE',
-              'android.permission.WAKE_LOCK',
-          ]
-          existing = {el.get(f'{{{NS}}}name') for el in root.findall('uses-permission')}
-          insert_idx = 0
-          children = list(root)
-          for i, child in enumerate(children):
-              if child.tag == 'uses-permission':
-                  insert_idx = i + 1
-          for perm in needed_perms:
-              if perm not in existing:
-                  el = ET.Element('uses-permission')
-                  el.set(f'{{{NS}}}name', perm)
-                  root.insert(insert_idx, el)
-                  insert_idx += 1
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
 
-          # Patch the activity element
-          for app in root.findall('application'):
-              for activity in app.findall('activity'):
-                  # Add supportsPictureInPicture
-                  if not activity.get(f'{{{NS}}}supportsPictureInPicture'):
-                      activity.set(f'{{{NS}}}supportsPictureInPicture', 'true')
-                  # Append PiP-required config changes without duplicating
-                  pip_changes = 'screenSize|smallestScreenSize|screenLayout|orientation'
-                  existing_changes = activity.get(f'{{{NS}}}configChanges', '')
-                  for change in pip_changes.split('|'):
-                      if change not in existing_changes:
-                          existing_changes = (existing_changes + '|' + change).strip('|')
-                  activity.set(f'{{{NS}}}configChanges', existing_changes)
+                  </activity>
 
-          # Write back preserving declaration
-          tree.write(MANIFEST, xml_declaration=True, encoding='utf-8')
-          print("Manifest patched successfully")
-          PYEOF
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+
+              </application>
+          </manifest>
+          EOF
 
       - name: Patch build.gradle
         run: |
