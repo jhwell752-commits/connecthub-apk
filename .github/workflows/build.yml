@@ -1,5 +1,7 @@
-name: Build APK
+name: Build APK (Capacitor)
+
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,95 +21,119 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
-      - name: Write Bubblewrap CLI config
+      # ── Install Capacitor CLI + Android platform ──
+      - name: Install dependencies
         run: |
-          mkdir -p $HOME/.bubblewrap
-          cat > $HOME/.bubblewrap/config.json << EOF
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      # ── Write capacitor.config.json ──
+      - name: Write Capacitor config
+        run: |
+          cat > capacitor.config.json << 'EOF'
           {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "$ANDROID_SDK_ROOT"
+            "appId": "com.connecthub.app",
+            "appName": "ConnectHub",
+            "webDir": "www",
+            "android": {
+              "allowMixedContent": true,
+              "backgroundColor": "#ffffff",
+              "captureInput": true
+            },
+            "server": {
+              "androidScheme": "https"
+            },
+            "plugins": {
+              "CapacitorHttp": {
+                "enabled": true
+              }
+            }
           }
           EOF
 
-      - name: Create twa directory and manifest
+      # ── Put your index.html into the www folder ──
+      - name: Prepare web assets
         run: |
-          mkdir -p ./twa
-          cat > ./twa/twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.connecthub.app",
-            "host": "connecthub40.pages.dev",
-            "name": "ConnectHub",
-            "launcherName": "ConnectHub",
-            "display": "standalone",
-            "orientation": "default",
-            "themeColor": "#000000",
-            "navigationColor": "#000000",
-            "navigationColorDark": "#000000",
-            "navigationDividerColor": "#000000",
-            "navigationDividerColorDark": "#000000",
-            "backgroundColor": "#ffffff",
-            "enableNotifications": false,
-            "startUrl": "/",
-            "iconUrl": "https://connecthub40.pages.dev/icon-512.png",
-            "maskableIconUrl": "https://connecthub40.pages.dev/icon-512.png",
-            "monochromeIconUrl": "https://connecthub40.pages.dev/icon-512.png",
-            "splashScreenFadeOutDuration": 300,
-            "signingKey": {
-              "path": "./android.keystore",
-              "alias": "android"
-            },
-            "appVersionCode": 1,
-            "appVersionName": "1.0.0",
-            "shortcuts": [],
-            "generatorApp": "bubblewrap-cli",
-            "webManifestUrl": "https://connecthub40.pages.dev/manifest.json",
-            "fallbackType": "customtabs",
-            "features": {
-              "locationDelegation": { "enabled": false },
-              "playBilling": { "enabled": false }
-            },
-            "alphaDependencies": { "enabled": false },
-            "enableSiteSettingsShortcut": true,
-            "isChromeOSOnly": false,
-            "isMetaQuest": false,
-            "fullScopeUrl": "https://connecthub40.pages.dev/",
-            "minSdkVersion": 21,
-            "targetSdkVersion": 32
-          }
-          EOF
+          mkdir -p www
+          cp index.html www/index.html
 
-      - name: Generate signing keystore
+      # ── Init and add Android platform ──
+      - name: Add Android platform
+        run: |
+          npx cap init "ConnectHub" "com.connecthub.app" --web-dir www
+          npx cap add android
+
+      # ── Patch AndroidManifest for PiP + camera + mic + background ──
+      - name: Patch AndroidManifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          # Add PiP support to the main activity
+          sed -i 's/android:launchMode="singleTask"/android:launchMode="singleTask"\n            android:supportsPictureInPicture="true"\n            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"/' $MANIFEST
+          # Add permissions if not already present
+          sed -i '/<uses-permission android:name="android.permission.INTERNET"/a \
+              <uses-permission android:name="android.permission.CAMERA" />\
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />\
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
+              <uses-permission android:name="android.permission.WAKE_LOCK" />' $MANIFEST
+
+      # ── Patch build.gradle to target SDK 34 ──
+      - name: Patch build.gradle
+        run: |
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/' android/app/build.gradle
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
+          sed -i 's/minSdkVersion .*/minSdkVersion 23/' android/app/build.gradle
+
+      # ── Sync web assets into Android project ──
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      # ── Generate signing keystore ──
+      - name: Generate keystore
         run: |
           keytool -genkeypair \
-            -keystore ./twa/android.keystore \
-            -alias android \
+            -keystore connecthub.keystore \
+            -alias connecthub \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
             -storepass connecthub123 \
             -keypass connecthub123 \
-            -dname "CN=ConnectHub Dev, OU=Dev, O=ConnectHub, L=Unknown, ST=Unknown, C=US" \
+            -dname "CN=ConnectHub, OU=Dev, O=ConnectHub, L=Unknown, ST=Unknown, C=US" \
             -noprompt
 
-      - name: Generate Android project
-        working-directory: ./twa
-        run: bubblewrap update --skipVersionUpgrade
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: '1'
+      # ── Write signing config into gradle ──
+      - name: Configure signing
+        run: |
+          cp connecthub.keystore android/app/connecthub.keystore
+          cat >> android/app/build.gradle << 'EOF'
 
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('connecthub.keystore')
+                      storePassword 'connecthub123'
+                      keyAlias 'connecthub'
+                      keyPassword 'connecthub123'
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
+              }
+          }
+          EOF
+
+      # ── Build the APK ──
       - name: Build APK
-        working-directory: ./twa
-        run: bubblewrap build --skipPwaValidation
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: '1'
-          BUBBLEWRAP_KEYSTORE_PASSWORD: connecthub123
-          BUBBLEWRAP_KEY_PASSWORD: connecthub123
+        working-directory: android
+        run: ./gradlew assembleRelease
 
+      # ── Upload APK artifact ──
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: connecthub-apk
-          path: twa/*.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
