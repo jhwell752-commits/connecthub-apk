@@ -828,8 +828,18 @@ document.getElementById('loginBtn').onclick=async()=>{
   setAuthLoading(true);
   try{
     const h=await hashPw(p);
-    const{data,error}=await sb.from('users').select('*').eq('username',u).eq('password_hash',h);
+    // 1) Try hashed password first
+    let{data,error}=await sb.from('users').select('*').eq('username',u).eq('password_hash',h);
     if(error)return toast('DB error: '+error.message);
+    // 2) Fallback: legacy plain-text password column (migrates old accounts)
+    if(!data||!data.length){
+      const{data:leg,error:legErr}=await sb.from('users').select('*').eq('username',u).eq('password',p);
+      if(!legErr&&leg&&leg.length){
+        // Auto-migrate: write hash, clear plaintext
+        await sb.from('users').update({password_hash:h,password:null}).eq('id',leg[0].id);
+        data=leg;
+      }
+    }
     if(!data||!data.length)return toast('Wrong username or password');
     localStorage.setItem('ch_sess',JSON.stringify({u,h}));
     await boot(data[0]);
@@ -888,13 +898,25 @@ async function boot(user){
     const sess=localStorage.getItem('ch_sess');
     if(!sess)return;
     const{u,h,p}=JSON.parse(sess);
+    if(!u)return;
     const pw_hash=h||(p?await hashPw(p):null);
-    if(!u||!pw_hash)return;
-    const{data,error}=await sb.from('users').select('*').eq('username',u).eq('password_hash',pw_hash);
-    if(error){localStorage.removeItem('ch_sess');return;}
+    let data=null,error=null;
+    if(pw_hash){
+      ({data,error}=await sb.from('users').select('*').eq('username',u).eq('password_hash',pw_hash));
+      if(error){localStorage.removeItem('ch_sess');return;}
+    }
+    // Fallback: legacy session stored plain p but account not yet migrated
+    if((!data||!data.length)&&p){
+      const{data:leg,error:legErr}=await sb.from('users').select('*').eq('username',u).eq('password',p);
+      if(!legErr&&leg&&leg.length){
+        const newHash=pw_hash||(await hashPw(p));
+        await sb.from('users').update({password_hash:newHash,password:null}).eq('id',leg[0].id);
+        localStorage.setItem('ch_sess',JSON.stringify({u,h:newHash}));
+        data=leg;
+      }
+    }
     if(data&&data.length){
-      // Upgrade stored session to hash-only (remove plaintext p if present)
-      if(!h)localStorage.setItem('ch_sess',JSON.stringify({u,h:pw_hash}));
+      if(!h&&pw_hash)localStorage.setItem('ch_sess',JSON.stringify({u,h:pw_hash}));
       await boot(data[0]);
     } else localStorage.removeItem('ch_sess');
   }catch(e){console.warn('autologin error',e);}
