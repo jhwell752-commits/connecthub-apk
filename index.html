@@ -805,12 +805,6 @@ function fmtDur(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=
 function fmtTimer(sec){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return h>0?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;}
 function alert2(msg){const el=document.createElement('div');el.className='ss-alert';el.innerHTML=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3000);}
 
-/* ══ PASSWORD HASHING ══ */
-async function hashPw(pw){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
 /* ══ DARK MODE ══ */
 function toggleDarkMode(){_darkMode=!_darkMode;document.body.classList.toggle('dark',_darkMode);localStorage.setItem('ch_dark',_darkMode?'1':'');alert2(_darkMode?'🌙 Dark mode on':'☀️ Light mode');}
 (()=>{if(localStorage.getItem('ch_dark')){_darkMode=true;document.body.classList.add('dark');}})();
@@ -827,21 +821,10 @@ document.getElementById('loginBtn').onclick=async()=>{
   if(!u||!p)return toast('Fill in all fields');
   setAuthLoading(true);
   try{
-    const h=await hashPw(p);
-    // 1) Try hashed password first
-    let{data,error}=await sb.from('users').select('*').eq('username',u).eq('password_hash',h);
+    const{data,error}=await sb.from('users').select('*').eq('username',u).eq('password',p);
     if(error)return toast('DB error: '+error.message);
-    // 2) Fallback: legacy plain-text password column (migrates old accounts)
-    if(!data||!data.length){
-      const{data:leg,error:legErr}=await sb.from('users').select('*').eq('username',u).eq('password',p);
-      if(!legErr&&leg&&leg.length){
-        // Auto-migrate: write hash, clear plaintext
-        await sb.from('users').update({password_hash:h,password:null}).eq('id',leg[0].id);
-        data=leg;
-      }
-    }
     if(!data||!data.length)return toast('Wrong username or password');
-    localStorage.setItem('ch_sess',JSON.stringify({u,h}));
+    localStorage.setItem('ch_sess',JSON.stringify({u,p}));
     await boot(data[0]);
   }catch(e){toast('Error: '+e.message);}
   finally{setAuthLoading(false);document.getElementById('loginBtn').textContent='Log In';}
@@ -856,8 +839,7 @@ document.getElementById('signupBtn').onclick=async()=>{
   try{
     const{data:ex}=await sb.from('users').select('id').eq('username',u);
     if(ex&&ex.length)return toast('Username already taken');
-    const h=await hashPw(p);
-    const{error}=await sb.from('users').insert([{username:u,password_hash:h,snap_score:0}]);
+    const{error}=await sb.from('users').insert([{username:u,password:p,snap_score:0}]);
     if(error)return toast('Signup failed: '+error.message);
     toast('Account created! Log in now.',true);
   }catch(e){toast('Error: '+e.message);}
@@ -897,28 +879,12 @@ async function boot(user){
   try{
     const sess=localStorage.getItem('ch_sess');
     if(!sess)return;
-    const{u,h,p}=JSON.parse(sess);
-    if(!u)return;
-    const pw_hash=h||(p?await hashPw(p):null);
-    let data=null,error=null;
-    if(pw_hash){
-      ({data,error}=await sb.from('users').select('*').eq('username',u).eq('password_hash',pw_hash));
-      if(error){localStorage.removeItem('ch_sess');return;}
-    }
-    // Fallback: legacy session stored plain p but account not yet migrated
-    if((!data||!data.length)&&p){
-      const{data:leg,error:legErr}=await sb.from('users').select('*').eq('username',u).eq('password',p);
-      if(!legErr&&leg&&leg.length){
-        const newHash=pw_hash||(await hashPw(p));
-        await sb.from('users').update({password_hash:newHash,password:null}).eq('id',leg[0].id);
-        localStorage.setItem('ch_sess',JSON.stringify({u,h:newHash}));
-        data=leg;
-      }
-    }
-    if(data&&data.length){
-      if(!h&&pw_hash)localStorage.setItem('ch_sess',JSON.stringify({u,h:pw_hash}));
-      await boot(data[0]);
-    } else localStorage.removeItem('ch_sess');
+    const{u,p}=JSON.parse(sess);
+    if(!u||!p)return;
+    const{data,error}=await sb.from('users').select('*').eq('username',u).eq('password',p);
+    if(error){localStorage.removeItem('ch_sess');return;}
+    if(data&&data.length)await boot(data[0]);
+    else localStorage.removeItem('ch_sess');
   }catch(e){console.warn('autologin error',e);}
 })();
 
